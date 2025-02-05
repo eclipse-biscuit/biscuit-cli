@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use biscuit_auth::{
     builder::BlockBuilder,
     builder_ext::BuilderExt,
@@ -41,22 +41,16 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
     let private_key_from = &match (
         &key_pair_cmd.from_private_key,
         &key_pair_cmd.from_private_key_file,
-        &key_pair_cmd.from_raw_private_key,
+        &key_pair_cmd.private_key_format,
     ) {
-        (Some(hex_string), None, false) => Some(KeyBytes::HexString(hex_string.to_owned())),
-        (None, Some(path), true) if path == &stdin_path => {
-            Some(KeyBytes::FromStdin(KeyFormat::RawBytes))
+        (Some(_), _, KeyFormat::RawBytes) => {
+            bail!("raw key input is only allowed from a file or stdin")
         }
-        (None, Some(file), true) => {
-            Some(KeyBytes::FromFile(KeyFormat::RawBytes, file.to_path_buf()))
-        }
-        (None, Some(path), false) if path == &stdin_path => {
-            Some(KeyBytes::FromStdin(KeyFormat::HexKey))
-        }
-        (None, Some(file), false) => {
-            Some(KeyBytes::FromFile(KeyFormat::HexKey, file.to_path_buf()))
-        }
-        (None, None, false) => None,
+        (Some(str), None, KeyFormat::HexKey) => Some(KeyBytes::HexString(str.to_owned())),
+        (Some(str), None, KeyFormat::PemKey) => Some(KeyBytes::PemString(str.to_owned())),
+        (None, Some(path), f) if path == &stdin_path => Some(KeyBytes::FromStdin(*f)),
+        (None, Some(path), f) => Some(KeyBytes::FromFile(*f, path.to_path_buf())),
+        (None, None, _) => None,
         // the other combinations are prevented by clap
         _ => unreachable!(),
     };
@@ -75,11 +69,13 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
 
     match (
         &key_pair_cmd.only_private_key,
-        &key_pair_cmd.raw_private_key_output,
         &key_pair_cmd.only_public_key,
-        &key_pair_cmd.raw_public_key_output,
+        &key_pair_cmd.output_key_format,
     ) {
-        (false, false, false, false) => {
+        (false, false, KeyFormat::RawBytes) => {
+            bail!("Only a single key can be returned in a binary format")
+        }
+        (false, false, KeyFormat::HexKey) => {
             if private_key_from.is_some() {
                 println!("Generating a keypair for the provided private key");
             } else {
@@ -88,17 +84,35 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
             println!("Private key: {}", key_pair.private().to_prefixed_string());
             println!("Public key: {}", key_pair.public());
         }
-        (true, true, false, false) => {
+        (false, false, KeyFormat::PemKey) => {
+            if private_key_from.is_some() {
+                println!("Generating a keypair for the provided private key");
+            } else {
+                println!("Generating a new random keypair");
+            }
+            println!(
+                "{}{}",
+                *key_pair.private().to_pem()?,
+                key_pair.public().to_pem()?
+            );
+        }
+        (true, false, KeyFormat::RawBytes) => {
             let _ = io::stdout().write_all(&key_pair.private().to_bytes());
         }
-        (true, false, false, false) => {
+        (true, false, KeyFormat::HexKey) => {
             println!("{}", key_pair.private().to_prefixed_string());
         }
-        (false, false, true, true) => {
+        (true, false, KeyFormat::PemKey) => {
+            println!("{}", *key_pair.private().to_pem()?);
+        }
+        (false, true, KeyFormat::RawBytes) => {
             let _ = io::stdout().write_all(&key_pair.public().to_bytes());
         }
-        (false, false, true, false) => {
+        (false, true, KeyFormat::HexKey) => {
             println!("{}", key_pair.public());
+        }
+        (false, true, KeyFormat::PemKey) => {
+            println!("{}", key_pair.public().to_pem()?);
         }
         // the other combinations are prevented by clap
         _ => unreachable!(),

@@ -35,25 +35,18 @@ pub struct KeyPairCmd {
     /// Generate the keypair from a private key stored in the given file (or use `-` to read it from stdin). If omitted, a random keypair will be generated
     #[clap(long, parse(from_os_str))]
     pub from_private_key_file: Option<PathBuf>,
-    /// Read the private key raw bytes directly, with no hex decoding
-    #[clap(
-        long,
-        requires("from-private-key-file"),
-        conflicts_with("from-private-key")
-    )]
-    pub from_raw_private_key: bool,
+    /// Input format for the private key, if provided. Default is hex
+    #[clap(long, default_value_t)]
+    pub private_key_format: KeyFormat,
     /// Only output the public part of the key pair
     #[clap(long, conflicts_with("only-private-key"))]
     pub only_public_key: bool,
-    /// Output the public key raw bytes directly, with no hex encoding
-    #[clap(long, requires("only-public-key"))]
-    pub raw_public_key_output: bool,
+    /// Output format (default is hex)
+    #[clap(long, default_value_t)]
+    pub output_key_format: KeyFormat,
     /// Only output the public part of the key pair
     #[clap(long, conflicts_with("only-public-key"))]
     pub only_private_key: bool,
-    /// Output the private key raw bytes directly, with no hex encoding
-    #[clap(long, requires("only-private-key"))]
-    pub raw_private_key_output: bool,
     /// Key algorithm: ed25519 (default) or secp256r1
     #[clap(long)]
     pub key_algorithm: Option<Algorithm>,
