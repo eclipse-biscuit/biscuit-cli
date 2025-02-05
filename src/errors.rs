@@ -10,6 +10,8 @@ use thiserror::Error;
 pub enum CliError {
     #[error("file not found: {0}")]
     FileNotFound(PathBuf),
+    #[error("error reading file: {0}")]
+    FileError(std::io::Error),
     #[error("I cannot read input from both stdin and an interactive editor. Please use proper files or flags instead.")]
     StdinEditorConflict,
     #[error("I cannot read several pieces of input from stdin at the same time. Please use proper files or flags instead.")]

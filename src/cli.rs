@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-use biscuit_auth::Algorithm;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -35,33 +34,49 @@ pub enum SubCommand {
 #[derive(Parser)]
 pub struct KeyPairCmd {
     /// Generate the keypair from the given private key. If omitted, a random keypair will be generated
-    #[clap(long, conflicts_with("from-private-key-file"))]
+    #[clap(long, value_name("PRIVATE_KEY"), conflicts_with("from-file"))]
     pub from_private_key: Option<String>,
     /// Generate the keypair from a private key stored in the given file (or use `-` to read it from stdin). If omitted, a random keypair will be generated
-    #[clap(long, parse(from_os_str))]
-    pub from_private_key_file: Option<PathBuf>,
-    /// Read the private key raw bytes directly, with no hex decoding
+    #[clap(long, value_name("PRIVATE_KEY_FILE"))]
+    pub from_file: Option<PathBuf>,
+    /// Input format for the private key (when provided).
     #[clap(
         long,
-        requires("from-private-key-file"),
-        conflicts_with("from-private-key")
+        value_enum,
+        default_value_t,
+        value_name("PRIVATE_KEY_FORMAT"),
+        requires("from-private-key"),
+        requires("from-file")
     )]
-    pub from_raw_private_key: bool,
-    /// Only output the public part of the key pair
+    pub from_format: KeyFormat,
+    /// Specify the private key algorithm, only when reading the private key raw bytes
+    #[clap(
+        long,
+        value_enum,
+        value_name("PRIVATE_KEY_ALGORITHM"),
+        requires("from-file")
+    )]
+    pub from_algorithm: Option<Algorithm>,
+    /// Key algorithm used when generating a keypair
+    #[clap(
+        long,
+        value_enum,
+        default_value_t,
+        value_name("KEYPAIR_ALGORITHM"),
+        conflicts_with("from-private-key"),
+        conflicts_with("from-file")
+    )]
+    pub key_algorithm: Algorithm,
+
+    /// Public and private key output format
+    #[clap(long, value_enum, default_value_t)]
+    pub key_output_format: KeyFormat,
+    /// Only output the private key
     #[clap(long, conflicts_with("only-private-key"))]
     pub only_public_key: bool,
-    /// Output the public key raw bytes directly, with no hex encoding
-    #[clap(long, requires("only-public-key"))]
-    pub raw_public_key_output: bool,
-    /// Only output the public part of the key pair
+    /// Only output the public key
     #[clap(long, conflicts_with("only-public-key"))]
     pub only_private_key: bool,
-    /// Output the private key raw bytes directly, with no hex encoding
-    #[clap(long, requires("only-private-key"))]
-    pub raw_private_key_output: bool,
-    /// Key algorithm: ed25519 (default) or secp256r1
-    #[clap(long)]
-    pub key_algorithm: Option<Algorithm>,
 }
 
 /// Generate a biscuit from a private key and an authority block
@@ -78,23 +93,8 @@ pub struct Generate {
     /// Output the biscuit raw bytes directly, with no base64 encoding
     #[clap(long)]
     pub raw: bool,
-    /// The private key used to sign the token
-    #[clap(long, required_unless_present("private-key-file"))]
-    pub private_key: Option<String>,
-    /// The private key used to sign the token
-    #[clap(
-        long,
-        parse(from_os_str),
-        required_unless_present("private-key"),
-        conflicts_with = "private-key"
-    )]
-    pub private_key_file: Option<PathBuf>,
-    /// Read the private key raw bytes directly (only available when reading the private key from a file)
-    #[clap(long, conflicts_with = "private-key", requires = "private-key-file")]
-    pub raw_private_key: bool,
-    /// Key algorithm: ed25519 (default) or secp256r1
-    #[clap(long)]
-    pub key_algorithm: Option<Algorithm>,
+    #[clap(flatten)]
+    pub private_key_args: common_args::PrivateKeyArgs,
     /// The optional context string attached to the authority block
     #[clap(long)]
     pub context: Option<String>,
@@ -155,12 +155,12 @@ pub struct Inspect {
     /// Check the biscuit public key
     #[clap(long, conflicts_with("public-key"), parse(from_os_str))]
     pub public_key_file: Option<PathBuf>,
-    /// Read the public key raw bytes directly
-    #[clap(long, requires("public-key-file"), conflicts_with("public-key"))]
-    pub raw_public_key: bool,
-    /// Key algorithm: ed25519 (default) or secp256r1
-    #[clap(long)]
-    pub key_algorithm: Option<Algorithm>,
+    /// Input format for the public key. raw is only available when reading the public key from a file
+    #[clap(long, value_enum, default_value_t)]
+    pub public_key_format: KeyFormat,
+    /// Specify the private key algorithm, only when reading the private key raw bytes
+    #[clap(long, value_enum, requires("public-key-file"))]
+    pub public_key_algorithm: Option<Algorithm>,
     #[clap(flatten)]
     pub run_limits_args: common_args::RunLimitArgs,
     #[clap(flatten)]
@@ -222,23 +222,8 @@ pub struct GenerateThirdPartyBlock {
     /// Read the request raw bytes directly, with no base64 parsing
     #[clap(long)]
     pub raw_input: bool,
-    /// The private key used to sign the third-party block
-    #[clap(long, required_unless_present("private-key-file"))]
-    pub private_key: Option<String>,
-    /// The private key used to sign the third-party block
-    #[clap(
-        long,
-        parse(from_os_str),
-        required_unless_present("private-key"),
-        conflicts_with = "private-key"
-    )]
-    pub private_key_file: Option<PathBuf>,
-    /// Read the private key raw bytes directly (only available when reading the private key from a file)
-    #[clap(long, conflicts_with = "private-key", requires = "private-key-file")]
-    pub raw_private_key: bool,
-    /// Key algorithm: ed25519 (default) or secp256r1
-    #[clap(long)]
-    pub key_algorithm: Option<Algorithm>,
+    #[clap(flatten)]
+    pub private_key_args: common_args::PrivateKeyArgs,
     /// Output the block raw bytes directly, with no base64 encoding
     #[clap(long)]
     pub raw_output: bool,
@@ -400,6 +385,33 @@ mod common_args {
         /// Read the biscuit raw bytes directly, with no base64 parsing
         #[clap(long)]
         pub raw_input: bool,
+    }
+
+    /// Arguments related to reading a private key for signing a block
+    #[derive(Parser)]
+    pub struct PrivateKeyArgs {
+        /// The private key used to sign the block
+        #[clap(long, required_unless_present("private-key-file"))]
+        pub private_key: Option<String>,
+        /// The private key used to sign the block
+        #[clap(
+            long,
+            parse(from_os_str),
+            required_unless_present("private-key"),
+            conflicts_with = "private-key"
+        )]
+        pub private_key_file: Option<PathBuf>,
+        /// Input format for the private key. raw is only available when reading the private key from a file or stdin
+        #[clap(long, value_enum, default_value_t)]
+        pub private_key_format: KeyFormat,
+        /// Specify the private key algorithm, only when reading the private key raw bytes
+        #[clap(
+            long,
+            value_enum,
+            value_name("PRIVATE_KEY_ALGORITHM"),
+            requires("private-key-file")
+        )]
+        pub private_key_algorithm: Option<Algorithm>,
     }
 }
 
