@@ -41,7 +41,7 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
     let private_key_from = &match (
         &key_pair_cmd.from_private_key,
         &key_pair_cmd.from_private_key_file,
-        &key_pair_cmd.private_key_format,
+        &key_pair_cmd.private_key_input_format,
     ) {
         (Some(_), _, KeyFormat::RawBytes) => {
             bail!("raw key input is only allowed from a file or stdin")
@@ -70,7 +70,7 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
     match (
         &key_pair_cmd.only_private_key,
         &key_pair_cmd.only_public_key,
-        &key_pair_cmd.output_key_format,
+        &key_pair_cmd.key_output_format,
     ) {
         (false, false, KeyFormat::RawBytes) => {
             bail!("Only a single key can be returned in a binary format")
@@ -131,11 +131,11 @@ fn handle_generate(generate: &Generate) -> Result<()> {
         &match (
             &generate.private_key,
             &generate.private_key_file,
-            &generate.raw_private_key,
+            &generate.private_key_format,
         ) {
-            (Some(hex_string), None, false) => KeyBytes::HexString(hex_string.to_owned()),
-            (None, Some(file), true) => KeyBytes::FromFile(KeyFormat::RawBytes, file.to_path_buf()),
-            (None, Some(file), false) => KeyBytes::FromFile(KeyFormat::HexKey, file.to_path_buf()),
+            (Some(str), None, KeyFormat::HexKey) => KeyBytes::HexString(str.to_owned()),
+            (Some(str), None, KeyFormat::PemKey) => KeyBytes::PemString(str.to_owned()),
+            (None, Some(file), f) => KeyBytes::FromFile(*f, file.to_path_buf()),
             // the other combinations are prevented by clap
             _ => unreachable!(),
         },

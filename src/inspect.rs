@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use biscuit_auth::{
     builder::{Fact, Rule},
     datalog::RunLimits,
@@ -403,18 +403,17 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
     };
 
     let public_key_from = match (
-        &inspect.public_key_file,
         &inspect.public_key,
-        &inspect.raw_public_key,
+        &inspect.public_key_file,
+        &inspect.public_key_format,
     ) {
-        (Some(file), None, true) => {
-            Some(KeyBytes::FromFile(KeyFormat::RawBytes, file.to_path_buf()))
+        (Some(_), _, KeyFormat::RawBytes) => {
+            bail!("raw key input is only allowed from a file or stdin")
         }
-        (Some(file), None, false) => {
-            Some(KeyBytes::FromFile(KeyFormat::HexKey, file.to_path_buf()))
-        }
-        (None, Some(str), false) => Some(KeyBytes::HexString(str.to_owned())),
-        (None, None, false) => None,
+        (Some(str), None, KeyFormat::HexKey) => Some(KeyBytes::HexString(str.to_string())),
+        (Some(str), None, KeyFormat::PemKey) => Some(KeyBytes::PemString(str.to_string())),
+        (None, Some(path), f) => Some(KeyBytes::FromFile(*f, path.to_path_buf())),
+        (None, None, _) => None,
         // the other combinations are prevented by clap
         _ => unreachable!(),
     };
@@ -498,7 +497,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
     let query_result;
 
     if let Some(key_from) = public_key_from {
-        let key = read_public_key_from(&key_from, &inspect.key_algorithm)?;
+        let key = read_public_key_from(&key_from, &inspect.public_key_algorithm)?;
         let sig_result = biscuit.verify(key);
         signatures_check = Some(sig_result.is_ok());
 

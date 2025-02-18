@@ -337,7 +337,8 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
         }
         KeyBytes::FromFile(KeyFormat::HexKey, path) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
-            str.parse()
+            str.trim()
+                .parse()
                 .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
         }
         KeyBytes::FromFile(KeyFormat::PemKey, path) => {
@@ -396,7 +397,8 @@ pub fn read_public_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<
         }
         KeyBytes::FromFile(KeyFormat::HexKey, path) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
-            str.parse()
+            str.trim()
+                .parse()
                 .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
         }
         KeyBytes::FromFile(KeyFormat::PemKey, path) => {
