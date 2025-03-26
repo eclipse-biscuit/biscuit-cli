@@ -7,12 +7,12 @@ use biscuit_auth::{
 };
 use chrono::{DateTime, Duration, Utc};
 use parse_duration as duration_parser;
-use std::env;
-use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
 use std::process::Command;
 use std::{collections::HashMap, convert::TryInto};
+use std::{env, str::FromStr};
+use std::{fmt::Display, fs};
 
 use crate::errors::CliError::*;
 
@@ -21,9 +21,44 @@ pub enum BiscuitFormat {
     Base64Biscuit,
 }
 
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum KeyFormat {
     RawBytes,
     HexKey,
+    PemKey,
+}
+
+impl FromStr for KeyFormat {
+    type Err = std::io::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "raw" => Ok(Self::RawBytes),
+            "hex" => Ok(Self::HexKey),
+            "pem" => Ok(Self::PemKey),
+            _ => Err(std::io::Error::other("invalid key format")),
+        }
+    }
+}
+
+impl Display for KeyFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                KeyFormat::RawBytes => "raw",
+                KeyFormat::HexKey => "hex",
+                KeyFormat::PemKey => "pem",
+            }
+        )
+    }
+}
+
+impl Default for KeyFormat {
+    fn default() -> Self {
+        Self::HexKey
+    }
 }
 
 // `Base64String` is never constructed, but is still handled in
@@ -42,6 +77,7 @@ pub enum KeyBytes {
     FromStdin(KeyFormat),
     FromFile(KeyFormat, PathBuf),
     HexString(String),
+    PemString(String),
 }
 
 pub enum DatalogInput {
@@ -270,6 +306,13 @@ fn read_authorizer_from_snapshot(
     Ok(builder)
 }
 
+fn read_pem_private_key(str: &str, alg: &Option<Algorithm>) -> Result<PrivateKey> {
+    Ok(match alg {
+        Some(alg) => PrivateKey::from_pem_with_algorithm(str, *alg),
+        None => PrivateKey::from_pem(str),
+    }?)
+}
+
 pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<PrivateKey> {
     let key = match from {
         KeyBytes::FromStdin(KeyFormat::RawBytes) => {
@@ -282,6 +325,11 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
             str.parse()
                 .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
         }
+        KeyBytes::FromStdin(KeyFormat::PemKey) => {
+            let str = read_stdin_string("PEM private key")?;
+            read_pem_private_key(&str, alg)
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+        }
         KeyBytes::FromFile(KeyFormat::RawBytes, path) => {
             let bytes = fs::read(path).map_err(|_| FileNotFound(path.clone()))?;
             PrivateKey::from_bytes(&bytes, alg.unwrap_or_default())
@@ -289,11 +337,19 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
         }
         KeyBytes::FromFile(KeyFormat::HexKey, path) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
-            str.parse()
+            str.trim()
+                .parse()
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+        }
+        KeyBytes::FromFile(KeyFormat::PemKey, path) => {
+            let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
+            read_pem_private_key(&str, alg)
                 .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
         }
         KeyBytes::HexString(str) => str
             .parse()
+            .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?,
+        KeyBytes::PemString(str) => read_pem_private_key(str, alg)
             .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?,
     };
     let key_alg = key.algorithm().into();
@@ -310,6 +366,13 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
     Ok(key)
 }
 
+fn read_pem_public_key(str: &str, alg: &Option<Algorithm>) -> Result<PublicKey> {
+    Ok(match alg {
+        Some(alg) => PublicKey::from_pem_with_algorithm(str, *alg),
+        None => PublicKey::from_pem(str),
+    }?)
+}
+
 pub fn read_public_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<PublicKey> {
     let key = match from {
         KeyBytes::FromStdin(KeyFormat::RawBytes) => {
@@ -322,6 +385,11 @@ pub fn read_public_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<
             str.parse()
                 .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
         }
+        KeyBytes::FromStdin(KeyFormat::PemKey) => {
+            let str = read_stdin_string("PEM public key")?;
+            read_pem_public_key(&str, alg)
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+        }
         KeyBytes::FromFile(KeyFormat::RawBytes, path) => {
             let bytes = fs::read(path).map_err(|_| FileNotFound(path.clone()))?;
             PublicKey::from_bytes(&bytes, alg.unwrap_or_default())
@@ -329,11 +397,19 @@ pub fn read_public_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<
         }
         KeyBytes::FromFile(KeyFormat::HexKey, path) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
-            str.parse()
+            str.trim()
+                .parse()
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+        }
+        KeyBytes::FromFile(KeyFormat::PemKey, path) => {
+            let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
+            read_pem_public_key(&str, alg)
                 .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
         }
         KeyBytes::HexString(str) => str
             .parse()
+            .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?,
+        KeyBytes::PemString(str) => read_pem_public_key(str, alg)
             .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?,
     };
     let key_alg = key.algorithm().into();
