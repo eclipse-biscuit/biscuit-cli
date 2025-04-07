@@ -145,3 +145,7 @@ cargo fmt --check
 # CI ensures that there are no outstanding clippy hints
 cargo clippy
 ```
+## Copyright - Licensing
+
+Copyright 2021 Clément Delafargue
+Licensed under `BSD-3-Clause`

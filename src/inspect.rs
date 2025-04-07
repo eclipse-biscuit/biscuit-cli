@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021 Clément Delafargue <clement@delafargue.name>
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 use anyhow::Result;
 use biscuit_auth::{
     builder::{Fact, Rule},
