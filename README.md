@@ -49,7 +49,7 @@ $ biscuit keypair --only-private-key > private-key-file
 ### Generate a public key from a private key
 
 ```sh
-$ biscuit keypair --from-private-key-file private-key-file --only-public-key
+$ biscuit keypair --from-file private-key-file --only-public-key
 > ed25519/2341bc530d8f074100734a41cc05cc82e4e2564eff61b0408f8e37a08f384767
 ```
 
@@ -85,10 +85,10 @@ $ biscuit inspect biscuit-file
 > 🙈 Datalog check skipped 🛡️
 ```
 
-A public key can be provided to check the biscuit root key (the command exits with a success code only if the keys match)
+A public key can be provided to verify the biscuit signatures
 
 ```sh
-$ # this will make sure the biscuit root key is the same as the one that's provided
+$ # this will make sure the biscuit has been signed with the expected key pair
 $ biscuit inspect --public-key-file public-key-file biscuit-file
 > Authority block:
 > == Datalog v3.0 ==
@@ -103,7 +103,7 @@ $ biscuit inspect --public-key-file public-key-file biscuit-file
 > 🙈 Datalog check skipped 🛡️
 ```
 
-An authorizer can be provided to check if the biscuit would be allowed in a given context (the command exits with a success code only if the keys match and if the authorization suceeded).
+An authorizer can be provided to check if the biscuit would be allowed in a given context (the command exits with a success code only if the signatures are verified and if the authorization suceeded).
 
 If you want to use your text editor to type in the authorizer, you can use `--authorize-interactive` instead.
 

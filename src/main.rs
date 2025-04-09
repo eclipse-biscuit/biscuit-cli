@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-use anyhow::Result;
+use anyhow::{bail, Result};
 use biscuit_auth::{
     builder::BlockBuilder,
     builder_ext::BuilderExt,
@@ -45,29 +45,23 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
     let stdin_path = PathBuf::from("-");
     let private_key_from = &match (
         &key_pair_cmd.from_private_key,
-        &key_pair_cmd.from_private_key_file,
-        &key_pair_cmd.from_raw_private_key,
+        &key_pair_cmd.from_file,
+        &key_pair_cmd.from_format,
     ) {
-        (Some(hex_string), None, false) => Some(KeyBytes::HexString(hex_string.to_owned())),
-        (None, Some(path), true) if path == &stdin_path => {
-            Some(KeyBytes::FromStdin(KeyFormat::RawBytes))
+        (Some(_), _, KeyFormat::Raw) => {
+            bail!("raw key input is only allowed from a file or stdin")
         }
-        (None, Some(file), true) => {
-            Some(KeyBytes::FromFile(KeyFormat::RawBytes, file.to_path_buf()))
-        }
-        (None, Some(path), false) if path == &stdin_path => {
-            Some(KeyBytes::FromStdin(KeyFormat::HexKey))
-        }
-        (None, Some(file), false) => {
-            Some(KeyBytes::FromFile(KeyFormat::HexKey, file.to_path_buf()))
-        }
-        (None, None, false) => None,
+        (Some(str), None, KeyFormat::Hex) => Some(KeyBytes::HexString(str.to_owned())),
+        (Some(str), None, KeyFormat::Pem) => Some(KeyBytes::PemString(str.to_owned())),
+        (None, Some(path), f) if path == &stdin_path => Some(KeyBytes::FromStdin(*f)),
+        (None, Some(path), f) => Some(KeyBytes::FromFile(*f, path.to_path_buf())),
+        (None, None, _) => None,
         // the other combinations are prevented by clap
         _ => unreachable!(),
     };
 
     let private_key: Option<PrivateKey> = if let Some(f) = private_key_from {
-        Some(read_private_key_from(f, &key_pair_cmd.key_algorithm)?)
+        Some(read_private_key_from(f, &key_pair_cmd.from_algorithm)?)
     } else {
         None
     };
@@ -75,35 +69,55 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
     let key_pair = if let Some(private) = private_key {
         KeyPair::from(&private)
     } else {
-        KeyPair::new_with_algorithm(key_pair_cmd.key_algorithm.unwrap_or_default())
+        KeyPair::new_with_algorithm(key_pair_cmd.key_algorithm.0)
     };
 
     match (
         &key_pair_cmd.only_private_key,
-        &key_pair_cmd.raw_private_key_output,
         &key_pair_cmd.only_public_key,
-        &key_pair_cmd.raw_public_key_output,
+        &key_pair_cmd.key_output_format,
     ) {
-        (false, false, false, false) => {
+        (false, false, KeyFormat::Raw) => {
+            bail!("Only a single key can be returned in a binary format")
+        }
+        (false, false, KeyFormat::Hex) => {
             if private_key_from.is_some() {
-                println!("Generating a keypair for the provided private key");
+                println!("Generating a keypair from the provided private key");
             } else {
                 println!("Generating a new random keypair");
             }
             println!("Private key: {}", key_pair.private().to_prefixed_string());
             println!("Public key: {}", key_pair.public());
         }
-        (true, true, false, false) => {
+        (false, false, KeyFormat::Pem) => {
+            if private_key_from.is_some() {
+                println!("Generating a keypair for the provided private key");
+            } else {
+                println!("Generating a new random keypair");
+            }
+            println!(
+                "{}{}",
+                *key_pair.private().to_pem()?,
+                key_pair.public().to_pem()?
+            );
+        }
+        (true, false, KeyFormat::Raw) => {
             let _ = io::stdout().write_all(&key_pair.private().to_bytes());
         }
-        (true, false, false, false) => {
+        (true, false, KeyFormat::Hex) => {
             println!("{}", key_pair.private().to_prefixed_string());
         }
-        (false, false, true, true) => {
+        (true, false, KeyFormat::Pem) => {
+            println!("{}", *key_pair.private().to_pem()?);
+        }
+        (false, true, KeyFormat::Raw) => {
             let _ = io::stdout().write_all(&key_pair.public().to_bytes());
         }
-        (false, false, true, false) => {
+        (false, true, KeyFormat::Hex) => {
             println!("{}", key_pair.public());
+        }
+        (false, true, KeyFormat::Pem) => {
+            println!("{}", key_pair.public().to_pem()?);
         }
         // the other combinations are prevented by clap
         _ => unreachable!(),
@@ -120,17 +134,17 @@ fn handle_generate(generate: &Generate) -> Result<()> {
 
     let private_key: Result<PrivateKey> = read_private_key_from(
         &match (
-            &generate.private_key,
-            &generate.private_key_file,
-            &generate.raw_private_key,
+            &generate.private_key_args.private_key,
+            &generate.private_key_args.private_key_file,
+            &generate.private_key_args.private_key_format,
         ) {
-            (Some(hex_string), None, false) => KeyBytes::HexString(hex_string.to_owned()),
-            (None, Some(file), true) => KeyBytes::FromFile(KeyFormat::RawBytes, file.to_path_buf()),
-            (None, Some(file), false) => KeyBytes::FromFile(KeyFormat::HexKey, file.to_path_buf()),
+            (Some(str), None, KeyFormat::Hex) => KeyBytes::HexString(str.to_owned()),
+            (Some(str), None, KeyFormat::Pem) => KeyBytes::PemString(str.to_owned()),
+            (None, Some(file), f) => KeyBytes::FromFile(*f, file.to_path_buf()),
             // the other combinations are prevented by clap
             _ => unreachable!(),
         },
-        &generate.key_algorithm,
+        &generate.private_key_args.private_key_algorithm,
     );
 
     let root = KeyPair::from(&private_key?);
@@ -276,17 +290,24 @@ fn handle_generate_third_party_block(
 
     let private_key: Result<PrivateKey> = read_private_key_from(
         &match (
-            &generate_third_party_block.private_key,
-            &generate_third_party_block.private_key_file,
-            &generate_third_party_block.raw_private_key,
+            &generate_third_party_block.private_key_args.private_key,
+            &generate_third_party_block.private_key_args.private_key_file,
+            &generate_third_party_block
+                .private_key_args
+                .private_key_format,
         ) {
-            (Some(hex_string), None, false) => KeyBytes::HexString(hex_string.to_owned()),
-            (None, Some(file), true) => KeyBytes::FromFile(KeyFormat::RawBytes, file.to_path_buf()),
-            (None, Some(file), false) => KeyBytes::FromFile(KeyFormat::HexKey, file.to_path_buf()),
+            (Some(hex_string), None, KeyFormat::Hex) => KeyBytes::HexString(hex_string.to_owned()),
+            (Some(pem_string), None, KeyFormat::Pem) => KeyBytes::PemString(pem_string.to_owned()),
+            (None, Some(file), KeyFormat::Raw) => {
+                KeyBytes::FromFile(KeyFormat::Raw, file.to_path_buf())
+            }
+            (None, Some(file), f) => KeyBytes::FromFile(*f, file.to_path_buf()),
             // the other combinations are prevented by clap
             _ => unreachable!(),
         },
-        &generate_third_party_block.key_algorithm,
+        &generate_third_party_block
+            .private_key_args
+            .private_key_algorithm,
     );
 
     let request = read_request_from(&request_from)?;
