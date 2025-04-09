@@ -8,9 +8,17 @@ use std::path::PathBuf;
 
 use crate::input::*;
 
-/// biscuit creation and inspection CLI. Run `biscuit --help` to see what's available.
+/// biscuit manipulation program. It lets you create, attenuate, inspect biscuits, inspect snapshots and manage keypairs.
+///
+/// Common tasks:
+/// - `biscuit keypair` to generate a new keypair
+/// - `biscuit generate --private-key-file PRIVKEY_FILE` to create a biscuit token
+/// - `biscuit attenuate FILE` to append a block to a biscuit token
+/// - `biscuit inspect FILE` to inspect a biscuit token
+/// - `biscuit inspect --public-key PUBKEY BISCUIT_FILE` to verify a biscuit signature
+/// - `biscuit inspect-snapshot SNAPSHOT_FILE` to inspect a biscuit snapshot
 #[derive(Parser)]
-#[clap(version, author)]
+#[clap(version, author, verbatim_doc_comment)]
 pub struct Opts {
     #[clap(subcommand)]
     pub subcmd: SubCommand,
@@ -24,7 +32,7 @@ pub enum SubCommand {
     InspectSnapshot(Box<InspectSnapshot>),
     Generate(Generate),
     Attenuate(Attenuate),
-    GenerateRequest(GenerateRequest),
+    GenerateThirdPartyBlockRequest(GenerateThirdPartyBlockRequest),
     GenerateThirdPartyBlock(GenerateThirdPartyBlock),
     AppendThirdPartyBlock(AppendThirdPartyBlock),
     Seal(Seal),
@@ -32,6 +40,7 @@ pub enum SubCommand {
 
 /// Create and manipulate key pairs
 #[derive(Parser)]
+#[clap(display_order(0))]
 pub struct KeyPairCmd {
     /// Generate the keypair from the given private key. If omitted, a random keypair will be generated
     #[clap(long, value_name("PRIVATE_KEY"), conflicts_with("from-file"))]
@@ -81,9 +90,10 @@ pub struct KeyPairCmd {
 
 /// Generate a biscuit from a private key and an authority block
 #[derive(Parser)]
+#[clap(display_order(1))]
 pub struct Generate {
-    /// Read the authority block from the given file (or use `-` to read from stdin). If omitted, an interactive $EDITOR will be opened.
-    #[clap(parse(from_os_str))]
+    /// Read the authority block from the given datalog file (or use `-` to read from stdin). If omitted, an interactive $EDITOR will be opened.
+    #[clap(parse(from_os_str), value_name("DATALOG_FILE"))]
     pub authority_file: Option<PathBuf>,
     /// Provide a root key id, as a hint for public key selection
     #[clap(long)]
@@ -98,13 +108,21 @@ pub struct Generate {
     /// The optional context string attached to the authority block
     #[clap(long)]
     pub context: Option<String>,
-    /// Add a TTL check to the generated authority block (either a RFC3339 datetime or a duration like '1d')
-    #[clap(long, parse(try_from_str = parse_ttl))]
+    /// Add a TTL check to the generated block. You can either provide an expiration timestamp or a duration
+    ///
+    /// [examples: 2025-04-01T00:00:00Z, 1d, 15m]
+    #[clap(
+        long,
+        parse(try_from_str = parse_ttl),
+        value_name("TTL"),
+        verbatim_doc_comment
+    )]
     pub add_ttl: Option<Ttl>,
 }
 
 /// Attenuate an existing biscuit by adding a new block
 #[derive(Parser)]
+#[clap(display_order(2))]
 pub struct Attenuate {
     #[clap(flatten)]
     pub biscuit_input_args: common_args::BiscuitInputArgs,
@@ -117,32 +135,9 @@ pub struct Attenuate {
     pub param_arg: common_args::ParamArg,
 }
 
-/// Attenuate an existing biscuit by adding a new third-party block
+/// Inspect a biscuit, optionally check its public key and run authorization.
 #[derive(Parser)]
-pub struct AppendThirdPartyBlock {
-    #[clap(flatten)]
-    pub biscuit_input_args: common_args::BiscuitInputArgs,
-    /// Output the biscuit raw bytes directly, with no base64 encoding
-    #[clap(long)]
-    pub raw_output: bool,
-    /// The third-party block to append to the token.
-    #[clap(long)]
-    pub block_contents: Option<String>,
-    /// The third-party block to append to the token
-    #[clap(
-        long,
-        parse(from_os_str),
-        conflicts_with("block-contents"),
-        required_unless_present("block-contents")
-    )]
-    pub block_contents_file: Option<PathBuf>,
-    /// Read the third-party block contents raw bytes directly, with no base64 parsing
-    #[clap(long, requires("block-contents-file"))]
-    pub raw_block_contents: bool,
-}
-
-/// Inspect a biscuit and optionally check its public key
-#[derive(Parser)]
+#[clap(display_order(3))]
 pub struct Inspect {
     /// Output the results in a machine-readable format
     #[clap(long)]
@@ -169,22 +164,29 @@ pub struct Inspect {
     pub query_args: common_args::QueryArgs,
     #[clap(flatten)]
     pub param_arg: common_args::ParamArg,
-    /// Save an authorizer snapshot to a file
-    #[clap(long, parse(from_os_str))]
+    /// Save the authorizer snapshot to a file
+    ///
+    /// This snapshot will contain the full authorization context, including the biscuit token and the evaluation results. This snapshot only contains the authorization context and does not carry any signatures. It cannot be used in place of a biscuit token.
+    /// This is useful to audit the authorization process.
+    #[clap(long, parse(from_os_str), value_name("SNAPSHOT_FILE"))]
     pub dump_snapshot_to: Option<PathBuf>,
     /// Output the snapshot raw bytes directly, with no base64 encoding
     #[clap(long, requires("dump-snapshot-to"))]
     pub dump_raw_snapshot: bool,
-    /// Save an authorizer builder snapshot to a file
-    #[clap(long, parse(from_os_str))]
+    /// Save a policies snapshot to a file
+    ///
+    /// This snapshot will only contain the authorizer rules, before the biscuit token is loaded, and before authorization is ran.
+    /// This is useful when applying the same authorization rules every time.
+    #[clap(long, parse(from_os_str), value_name("SNAPSHOT_FILE"))]
     pub dump_policies_snapshot_to: Option<PathBuf>,
-    /// Output the snapshot raw bytes directly, with no base64 encoding
+    /// Output the policies snapshot raw bytes directly, with no base64 encoding
     #[clap(long, requires("dump-snapshot-to"))]
-    pub dump_raw_raw_policies_snapshot: bool,
+    pub dump_raw_policies_snapshot: bool,
 }
 
-/// Inspect a snapshot
+/// Inspect a snapshot, optionally query it
 #[derive(Parser)]
+#[clap(display_order(4))]
 pub struct InspectSnapshot {
     /// Output the results in a machine-readable format
     #[clap(long)]
@@ -205,7 +207,8 @@ pub struct InspectSnapshot {
 
 /// Generate a third-party block request from an existing biscuit
 #[derive(Parser)]
-pub struct GenerateRequest {
+#[clap(display_order(5))]
+pub struct GenerateThirdPartyBlockRequest {
     #[clap(flatten)]
     pub biscuit_input_args: common_args::BiscuitInputArgs,
     /// Output the request raw bytes directly, with no base64 encoding
@@ -213,8 +216,9 @@ pub struct GenerateRequest {
     pub raw_output: bool,
 }
 
-/// Generate a third-party block from a request
+/// Generate a third-party block from a third-party block request
 #[derive(Parser)]
+#[clap(display_order(6))]
 pub struct GenerateThirdPartyBlock {
     /// Read the request from the given file (or use `-` to read from stdin)
     #[clap(parse(from_os_str))]
@@ -233,8 +237,34 @@ pub struct GenerateThirdPartyBlock {
     pub param_arg: common_args::ParamArg,
 }
 
+/// Append a third-party block to a biscuit
+#[derive(Parser)]
+#[clap(display_order(7))]
+pub struct AppendThirdPartyBlock {
+    #[clap(flatten)]
+    pub biscuit_input_args: common_args::BiscuitInputArgs,
+    /// Output the biscuit raw bytes directly, with no base64 encoding
+    #[clap(long)]
+    pub raw_output: bool,
+    /// The third-party block to append to the token.
+    #[clap(long)]
+    pub block_contents: Option<String>,
+    /// The third-party block to append to the token
+    #[clap(
+        long,
+        parse(from_os_str),
+        conflicts_with("block-contents"),
+        required_unless_present("block-contents")
+    )]
+    pub block_contents_file: Option<PathBuf>,
+    /// Read the third-party block contents raw bytes directly, with no base64 parsing
+    #[clap(long, requires("block-contents-file"))]
+    pub raw_block_contents: bool,
+}
+
 /// Seal a token, preventing further attenuation
 #[derive(Parser)]
+#[clap(display_order(8))]
 pub struct Seal {
     #[clap(flatten)]
     pub biscuit_input_args: common_args::BiscuitInputArgs,
@@ -255,9 +285,10 @@ mod common_args {
     pub struct QueryArgs {
         /// Query the authorizer after evaluation. If no authorizer is provided, query the token after evaluation.
         #[clap(
-        long,
-        value_parser = clap::builder::ValueParser::new(parse_rule),
-    )]
+          long,
+          value_parser = clap::builder::ValueParser::new(parse_rule),
+          value_name("DATALOG_RULE")
+        )]
         pub query: Option<Rule>,
         /// Query facts from all blocks (not just authority, authorizer or explicitly trusted blocks). Be careful, this can return untrustworthy facts.
         #[clap(long, requires("query"))]
@@ -267,13 +298,20 @@ mod common_args {
     /// Arguments related to providing datalog parameters
     #[derive(Parser)]
     pub struct ParamArg {
-        /// Provide a value for a datalog parameter. `type` is optional and defaults to `string`. Possible types are pubkey, string, integer, date, bytes or bool.
-        /// Bytes values must be hex-encoded and start with `hex:`
-        /// Public keys must be hex-encoded and start with `ed25519/` or `secp256r1/`
+        /// Provide a value for a datalog parameter.
+        ///
+        /// `type` is optional and defaults to `string`.
+        /// Possible types are pubkey, string, integer, date, bytes or bool.
+        /// Bytes values must be hex-encoded and start with `hex:`.
+        /// Public keys must be hex-encoded and start with `ed25519/` or `secp256r1/`.
+        /// Dates must be RFC3339 timestamps
+        ///
+        /// [examples: name=john, age:integer=42, is_happy:bool=true]
         #[clap(
         long,
         value_parser = clap::builder::ValueParser::new(parse_param),
-        value_name = "key[:type]=value"
+        verbatim_doc_comment,
+        value_name = "key[:type]=value",
     )]
         pub param: Vec<Param>,
     }
@@ -289,10 +327,14 @@ mod common_args {
         /// evaluation
         #[clap(long)]
         pub max_iterations: Option<u64>,
-        /// Configure the maximum evaluation duration before aborting
+        /// Configure the maximum evaluation duration before aborting.
+        ///
+        /// [examples: 100ms, 1s]
         #[clap(
             long,
-            parse(try_from_str = parse_duration)
+            parse(try_from_str = parse_duration),
+            value_name("DURATION"),
+            verbatim_doc_comment
         )]
         pub max_time: Option<Duration>,
     }
@@ -318,7 +360,8 @@ mod common_args {
             conflicts_with("authorize-with"),
             conflicts_with("authorize-with-snapshot"),
             conflicts_with("authorize-with-snapshot-file"),
-            conflicts_with("authorize-interactive")
+            conflicts_with("authorize-interactive"),
+            value_name("DATALOG_FILE")
         )]
         pub authorize_with_file: Option<PathBuf>,
         /// Authorize the biscuit with the provided authorizer
@@ -328,27 +371,28 @@ mod common_args {
             conflicts_with("authorize-with-file"),
             conflicts_with("authorize-with-snapshot"),
             conflicts_with("authorize-with-snapshot-file"),
-            conflicts_with("authorize-interactive")
+            conflicts_with("authorize-interactive"),
+            value_name("DATALOG")
         )]
         pub authorize_with: Option<String>,
-        /// Authorize the biscuit with the provided snapshot
-        /// The snapshot must not be evaluated
+        /// Authorize the biscuit with the provided policies snapshot.
         #[clap(
             long,
             conflicts_with("authorize-with"),
             conflicts_with("authorize-with-file"),
             conflicts_with("authorize-with-snapshot-file"),
-            conflicts_with("authorize-interactive")
+            conflicts_with("authorize-interactive"),
+            value_name("SNAPSHOT")
         )]
         pub authorize_with_snapshot: Option<String>,
-        /// Authorize the biscuit with the provided snapshot
-        /// The snapshot must not be evaluated
+        /// Authorize the biscuit with the provided policies snapshot.
         #[clap(
             long,
             conflicts_with("authorize-with"),
             conflicts_with("authorize-with-file"),
             conflicts_with("authorize-with-snapshot"),
-            conflicts_with("authorize-interactive")
+            conflicts_with("authorize-interactive"),
+            value_name("SNAPSHOT_FILE")
         )]
         pub authorize_with_snapshot_file: Option<PathBuf>,
         /// Read the snapshot from a binary file
@@ -363,16 +407,28 @@ mod common_args {
     #[derive(Parser)]
     pub struct BlockArgs {
         /// The block to append to the token. If `--block` and `--block-file` are omitted, an interactive $EDITOR will be opened.
-        #[clap(long)]
+        #[clap(long, value_name("DATALOG"))]
         pub block: Option<String>,
         /// The block to append to the token. If `--block` and `--block-file` are omitted, an interactive $EDITOR will be opened.
-        #[clap(long, parse(from_os_str), conflicts_with = "block")]
+        #[clap(
+            long,
+            parse(from_os_str),
+            conflicts_with = "block",
+            value_name("DATALOG_FILE")
+        )]
         pub block_file: Option<PathBuf>,
         /// The optional context string attached to the new block
         #[clap(long)]
         pub context: Option<String>,
-        /// Add a TTL check to the generated block (either a RFC3339 datetime or a duration like '1d')
-        #[clap(long, parse(try_from_str = parse_ttl))]
+        /// Add a TTL check to the generated block. You can either provide an expiration timestamp or a duration
+        ///
+        /// [examples: 2025-04-01T00:00:00Z, 1d, 15m]
+        #[clap(
+            long,
+            parse(try_from_str = parse_ttl),
+            value_name("TTL"),
+            verbatim_doc_comment
+        )]
         pub add_ttl: Option<Ttl>,
     }
 
