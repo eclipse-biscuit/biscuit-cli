@@ -30,7 +30,9 @@ fn handle_command(cmd: &SubCommand) -> Result<()> {
         SubCommand::InspectSnapshot(inspect_snapshot) => handle_inspect_snapshot(inspect_snapshot),
         SubCommand::Generate(generate) => handle_generate(generate),
         SubCommand::Attenuate(attenuate) => handle_attenuate(attenuate),
-        SubCommand::GenerateRequest(generate_request) => handle_generate_request(generate_request),
+        SubCommand::GenerateThirdPartyBlockRequest(generate_request) => {
+            handle_generate_request(generate_request)
+        }
         SubCommand::GenerateThirdPartyBlock(generate_third_party_block) => {
             handle_generate_third_party_block(generate_third_party_block)
         }
@@ -228,7 +230,7 @@ fn handle_attenuate(attenuate: &Attenuate) -> Result<()> {
     Ok(())
 }
 
-fn handle_generate_request(generate_request: &GenerateRequest) -> Result<()> {
+fn handle_generate_request(generate_request: &GenerateThirdPartyBlockRequest) -> Result<()> {
     let biscuit_format = if generate_request.biscuit_input_args.raw_input {
         BiscuitFormat::RawBiscuit
     } else {

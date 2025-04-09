@@ -516,7 +516,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
                     authorizer_builder = authorizer_builder.fact(time_fact.as_ref())?;
                 }
                 if let Some(policies_snapshot_file) = &inspect.dump_policies_snapshot_to {
-                    if inspect.dump_raw_raw_policies_snapshot {
+                    if inspect.dump_raw_policies_snapshot {
                         let bytes = authorizer_builder.to_raw_snapshot()?;
                         fs::write(policies_snapshot_file, bytes)?;
                     } else {
