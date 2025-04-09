@@ -503,14 +503,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
 
     match annotation {
       Some("pubkey") => {
-        let hex_key = value.strip_prefix("ed25519/").ok_or_else(|| Error::new(
-        ErrorKind::Other,
-        "Unsupported public key type. Only hex-encoded ed25519 public keys are supported. They must start with `ed25519/`.",
-        ))?;
-        let bytes =
-            hex::decode(hex_key).map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)));
-        let pubkey = PublicKey::from_bytes(&bytes?, Algorithm::Ed25519)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+        let pubkey = value.parse().map_err(Error::other)?;
         Ok(Param::PublicKey(name.to_string(), pubkey))
       },
       Some("integer") => {
