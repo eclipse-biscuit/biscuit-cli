@@ -1,3 +1,11 @@
+# `0.6.0-beta.2`
+
+- biscuit-auth 6.0.0-beta.3
+  - dedicated prefix for private keys
+- read secp256r1 keys in datalog parameters
+- support for PEM keys
+- improve CLI documentation
+
 # `0.6.0-beta.1`
 
 - biscuit-auth 6.0.0-beta.1
