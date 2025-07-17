@@ -1,4 +1,6 @@
-# Biscuit CLI
+# Eclipse Biscuit CLI
+
+This repo is part of the [eclipse biscuit](https://github.com/biscuit-auth/biscuit) project.
 
 This package provides a Command Line Interface allowing to manipulate [biscuit](https://github.com/biscuit-auth/biscuit) tokens.
 
