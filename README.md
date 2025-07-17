@@ -1,4 +1,6 @@
-# Biscuit CLI
+# Eclipse Biscuit CLI
+
+This repo is part of the [eclipse biscuit](https://github.com/biscuit-auth/biscuit) project.
 
 This package provides a Command Line Interface allowing to manipulate [biscuit](https://github.com/biscuit-auth/biscuit) tokens.
 
@@ -39,7 +41,7 @@ Here are a list of common use-cases:
 $ # this will output the keypair, you can then copy/paste the components
 $ biscuit keypair
 > Generating a new random keypair
-> Private key: ed25519/d1e3ebc3f522cc2f7bb40c2377830d834c41ebeb0aa54d881a75059704dfa6cb
+> Private key: ed25519-private/d1e3ebc3f522cc2f7bb40c2377830d834c41ebeb0aa54d881a75059704dfa6cb
 > Public key: ed25519/80c596ea5a6ade1a2f8e7bf96359732d9274789d8e85c0a0a62adbff16f4b289
 
 $ # this will save the private key to a file so you can use it later
