@@ -10,7 +10,7 @@ use biscuit_auth::{
     Authorizer, AuthorizerBuilder, PrivateKey, PublicKey, ThirdPartyRequest, UnverifiedBiscuit,
 };
 use chrono::{DateTime, Duration, Utc};
-use clap::{PossibleValue, ValueEnum};
+use clap::{builder::PossibleValue, ValueEnum};
 use parse_duration as duration_parser;
 use std::fs;
 use std::io::{self, Read};
@@ -50,7 +50,7 @@ impl ValueEnum for Algorithm {
         ]
     }
 
-    fn to_possible_value<'a>(&self) -> Option<clap::PossibleValue<'a>> {
+    fn to_possible_value(&self) -> Option<PossibleValue> {
         Some(PossibleValue::new(match self.0 {
             biscuit_auth::Algorithm::Ed25519 => "ed25519",
             biscuit_auth::Algorithm::Secp256r1 => "secp256r1",
@@ -541,7 +541,7 @@ pub fn append_third_party_from(
     Ok(b)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Ttl {
     Duration(Duration),
     DateTime(DateTime<Utc>),

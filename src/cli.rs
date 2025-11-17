@@ -43,27 +43,27 @@ pub enum SubCommand {
 #[clap(display_order(0))]
 pub struct KeyPairCmd {
     /// Generate the keypair from the given private key. If omitted, a random keypair will be generated
-    #[clap(long, value_name("PRIVATE_KEY"), conflicts_with("from-file"))]
+    #[clap(long, value_name = "PRIVATE_KEY", conflicts_with("from_file"))]
     pub from_private_key: Option<String>,
     /// Generate the keypair from a private key stored in the given file (or use `-` to read it from stdin). If omitted, a random keypair will be generated
-    #[clap(long, value_name("PRIVATE_KEY_FILE"))]
+    #[clap(long, value_name = "PRIVATE_KEY_FILE")]
     pub from_file: Option<PathBuf>,
     /// Input format for the private key (when provided).
     #[clap(
         long,
         value_enum,
         default_value_t,
-        value_name("PRIVATE_KEY_FORMAT"),
-        requires("from-private-key"),
-        requires("from-file")
+        value_name = "PRIVATE_KEY_FORMAT",
+        requires("from_private_key"),
+        requires("from_file")
     )]
     pub from_format: KeyFormat,
     /// Specify the private key algorithm, only when reading the private key raw bytes
     #[clap(
         long,
         value_enum,
-        value_name("PRIVATE_KEY_ALGORITHM"),
-        requires("from-file")
+        value_name = "PRIVATE_KEY_ALGORITHM",
+        requires("from_file")
     )]
     pub from_algorithm: Option<Algorithm>,
     /// Key algorithm used when generating a keypair
@@ -71,9 +71,9 @@ pub struct KeyPairCmd {
         long,
         value_enum,
         default_value_t,
-        value_name("KEYPAIR_ALGORITHM"),
-        conflicts_with("from-private-key"),
-        conflicts_with("from-file")
+        value_name = "KEYPAIR_ALGORITHM",
+        conflicts_with("from_private_key"),
+        conflicts_with("from_file")
     )]
     pub key_algorithm: Algorithm,
 
@@ -81,10 +81,10 @@ pub struct KeyPairCmd {
     #[clap(long, value_enum, default_value_t)]
     pub key_output_format: KeyFormat,
     /// Only output the private key
-    #[clap(long, conflicts_with("only-private-key"))]
+    #[clap(long, conflicts_with("only_private_key"))]
     pub only_public_key: bool,
     /// Only output the public key
-    #[clap(long, conflicts_with("only-public-key"))]
+    #[clap(long, conflicts_with("only_public_key"))]
     pub only_private_key: bool,
 }
 
@@ -93,7 +93,7 @@ pub struct KeyPairCmd {
 #[clap(display_order(1))]
 pub struct Generate {
     /// Read the authority block from the given datalog file (or use `-` to read from stdin). If omitted, an interactive $EDITOR will be opened.
-    #[clap(parse(from_os_str), value_name("DATALOG_FILE"))]
+    #[clap(value_name = "DATALOG_FILE")]
     pub authority_file: Option<PathBuf>,
     /// Provide a root key id, as a hint for public key selection
     #[clap(long)]
@@ -113,8 +113,8 @@ pub struct Generate {
     /// [examples: 2025-04-01T00:00:00Z, 1d, 15m]
     #[clap(
         long,
-        parse(try_from_str = parse_ttl),
-        value_name("TTL"),
+        value_parser = clap::builder::ValueParser::new(parse_ttl),
+        value_name = "TTL",
         verbatim_doc_comment
     )]
     pub add_ttl: Option<Ttl>,
@@ -145,16 +145,16 @@ pub struct Inspect {
     #[clap(flatten)]
     pub biscuit_input_args: common_args::BiscuitInputArgs,
     /// Check the biscuit public key
-    #[clap(long, conflicts_with("public-key-file"))]
+    #[clap(long, conflicts_with("public_key_file"))]
     pub public_key: Option<String>,
     /// Check the biscuit public key
-    #[clap(long, conflicts_with("public-key"), parse(from_os_str))]
+    #[clap(long, conflicts_with("public_key"))]
     pub public_key_file: Option<PathBuf>,
     /// Input format for the public key. raw is only available when reading the public key from a file
     #[clap(long, value_enum, default_value_t)]
     pub public_key_format: KeyFormat,
     /// Specify the private key algorithm, only when reading the private key raw bytes
-    #[clap(long, value_enum, requires("public-key-file"))]
+    #[clap(long, value_enum, requires("public_key_file"))]
     pub public_key_algorithm: Option<Algorithm>,
     #[clap(flatten)]
     pub run_limits_args: common_args::RunLimitArgs,
@@ -168,19 +168,19 @@ pub struct Inspect {
     ///
     /// This snapshot will contain the full authorization context, including the biscuit token and the evaluation results. This snapshot only contains the authorization context and does not carry any signatures. It cannot be used in place of a biscuit token.
     /// This is useful to audit the authorization process.
-    #[clap(long, parse(from_os_str), value_name("SNAPSHOT_FILE"))]
+    #[clap(long, value_name = "SNAPSHOT_FILE")]
     pub dump_snapshot_to: Option<PathBuf>,
     /// Output the snapshot raw bytes directly, with no base64 encoding
-    #[clap(long, requires("dump-snapshot-to"))]
+    #[clap(long, requires("dump_snapshot_to"))]
     pub dump_raw_snapshot: bool,
     /// Save a policies snapshot to a file
     ///
     /// This snapshot will only contain the authorizer rules, before the biscuit token is loaded, and before authorization is ran.
     /// This is useful when applying the same authorization rules every time.
-    #[clap(long, parse(from_os_str), value_name("SNAPSHOT_FILE"))]
+    #[clap(long, value_name = "SNAPSHOT_FILE")]
     pub dump_policies_snapshot_to: Option<PathBuf>,
     /// Output the policies snapshot raw bytes directly, with no base64 encoding
-    #[clap(long, requires("dump-snapshot-to"))]
+    #[clap(long, requires("dump_snapshot_to"))]
     pub dump_raw_policies_snapshot: bool,
 }
 
@@ -192,7 +192,6 @@ pub struct InspectSnapshot {
     #[clap(long)]
     pub json: bool,
     /// Read the snapshot from the given file (or use `-` to read from stdin)
-    #[clap(parse(from_os_str))]
     pub snapshot_file: PathBuf,
     /// Read the snapshot raw bytes directly, with no base64 parsing
     #[clap(long)]
@@ -221,7 +220,6 @@ pub struct GenerateThirdPartyBlockRequest {
 #[clap(display_order(6))]
 pub struct GenerateThirdPartyBlock {
     /// Read the request from the given file (or use `-` to read from stdin)
-    #[clap(parse(from_os_str))]
     pub request_file: PathBuf,
     /// Read the request raw bytes directly, with no base64 parsing
     #[clap(long)]
@@ -252,13 +250,12 @@ pub struct AppendThirdPartyBlock {
     /// The third-party block to append to the token
     #[clap(
         long,
-        parse(from_os_str),
-        conflicts_with("block-contents"),
-        required_unless_present("block-contents")
+        conflicts_with("block_contents"),
+        required_unless_present("block_contents")
     )]
     pub block_contents_file: Option<PathBuf>,
     /// Read the third-party block contents raw bytes directly, with no base64 parsing
-    #[clap(long, requires("block-contents-file"))]
+    #[clap(long, requires("block_contents_file"))]
     pub raw_block_contents: bool,
 }
 
@@ -287,7 +284,7 @@ mod common_args {
         #[clap(
           long,
           value_parser = clap::builder::ValueParser::new(parse_rule),
-          value_name("DATALOG_RULE")
+          value_name = "DATALOG_RULE"
         )]
         pub query: Option<Rule>,
         /// Query facts from all blocks (not just authority, authorizer or explicitly trusted blocks). Be careful, this can return untrustworthy facts.
@@ -332,8 +329,8 @@ mod common_args {
         /// [examples: 100ms, 1s]
         #[clap(
             long,
-            parse(try_from_str = parse_duration),
-            value_name("DURATION"),
+            value_parser = clap::builder::ValueParser::new(parse_duration),
+            value_name = "DURATION",
             verbatim_doc_comment
         )]
         pub max_time: Option<Duration>,
@@ -346,57 +343,56 @@ mod common_args {
         #[clap(
             long,
             alias("verify-interactive"),
-            conflicts_with("authorize-with"),
-            conflicts_with("authorize-with-file"),
-            conflicts_with("authorize-with-snapshot"),
-            conflicts_with("authorize-with-snapshot-file")
+            conflicts_with("authorize_with"),
+            conflicts_with("authorize_with_file"),
+            conflicts_with("authorize_with_snapshot"),
+            conflicts_with("authorize_with_snapshot_file")
         )]
         pub authorize_interactive: bool,
         /// Authorize the biscuit with the provided authorizer.
         #[clap(
             long,
-            parse(from_os_str),
             alias("verify-with-file"),
-            conflicts_with("authorize-with"),
-            conflicts_with("authorize-with-snapshot"),
-            conflicts_with("authorize-with-snapshot-file"),
-            conflicts_with("authorize-interactive"),
-            value_name("DATALOG_FILE")
+            conflicts_with("authorize_with"),
+            conflicts_with("authorize_with_snapshot"),
+            conflicts_with("authorize_with_snapshot_file"),
+            conflicts_with("authorize_interactive"),
+            value_name = "DATALOG_FILE"
         )]
         pub authorize_with_file: Option<PathBuf>,
         /// Authorize the biscuit with the provided authorizer
         #[clap(
             long,
             alias("verify-with"),
-            conflicts_with("authorize-with-file"),
-            conflicts_with("authorize-with-snapshot"),
-            conflicts_with("authorize-with-snapshot-file"),
-            conflicts_with("authorize-interactive"),
-            value_name("DATALOG")
+            conflicts_with("authorize_with_file"),
+            conflicts_with("authorize_with_snapshot"),
+            conflicts_with("authorize_with_snapshot_file"),
+            conflicts_with("authorize_interactive"),
+            value_name = "DATALOG"
         )]
         pub authorize_with: Option<String>,
         /// Authorize the biscuit with the provided policies snapshot.
         #[clap(
             long,
-            conflicts_with("authorize-with"),
-            conflicts_with("authorize-with-file"),
-            conflicts_with("authorize-with-snapshot-file"),
-            conflicts_with("authorize-interactive"),
-            value_name("SNAPSHOT")
+            conflicts_with("authorize_with"),
+            conflicts_with("authorize_with_file"),
+            conflicts_with("authorize_with_snapshot_file"),
+            conflicts_with("authorize_interactive"),
+            value_name = "SNAPSHOT"
         )]
         pub authorize_with_snapshot: Option<String>,
         /// Authorize the biscuit with the provided policies snapshot.
         #[clap(
             long,
-            conflicts_with("authorize-with"),
-            conflicts_with("authorize-with-file"),
-            conflicts_with("authorize-with-snapshot"),
-            conflicts_with("authorize-interactive"),
-            value_name("SNAPSHOT_FILE")
+            conflicts_with("authorize_with"),
+            conflicts_with("authorize_with_file"),
+            conflicts_with("authorize_with_snapshot"),
+            conflicts_with("authorize_interactive"),
+            value_name = "SNAPSHOT_FILE"
         )]
         pub authorize_with_snapshot_file: Option<PathBuf>,
         /// Read the snapshot from a binary file
-        #[clap(long, requires("authorize-with-snapshot-file"))]
+        #[clap(long, requires("authorize_with_snapshot_file"))]
         pub authorize_with_raw_snapshot_file: bool,
         /// Include the current time in the verifier facts
         #[clap(long)]
@@ -407,14 +403,13 @@ mod common_args {
     #[derive(Parser)]
     pub struct BlockArgs {
         /// The block to append to the token. If `--block` and `--block-file` are omitted, an interactive $EDITOR will be opened.
-        #[clap(long, value_name("DATALOG"))]
+        #[clap(long, value_name = "DATALOG")]
         pub block: Option<String>,
         /// The block to append to the token. If `--block` and `--block-file` are omitted, an interactive $EDITOR will be opened.
         #[clap(
             long,
-            parse(from_os_str),
             conflicts_with = "block",
-            value_name("DATALOG_FILE")
+            value_name = "DATALOG_FILE"
         )]
         pub block_file: Option<PathBuf>,
         /// The optional context string attached to the new block
@@ -425,8 +420,8 @@ mod common_args {
         /// [examples: 2025-04-01T00:00:00Z, 1d, 15m]
         #[clap(
             long,
-            parse(try_from_str = parse_ttl),
-            value_name("TTL"),
+            value_parser = clap::builder::ValueParser::new(parse_ttl),
+            value_name = "TTL",
             verbatim_doc_comment
         )]
         pub add_ttl: Option<Ttl>,
@@ -436,7 +431,6 @@ mod common_args {
     #[derive(Parser)]
     pub struct BiscuitInputArgs {
         /// Read the biscuit from the given file (or use `-` to read from stdin)
-        #[clap(parse(from_os_str))]
         pub biscuit_file: PathBuf,
         /// Read the biscuit raw bytes directly, with no base64 parsing
         #[clap(long)]
@@ -447,14 +441,13 @@ mod common_args {
     #[derive(Parser)]
     pub struct PrivateKeyArgs {
         /// The private key used to sign the block
-        #[clap(long, required_unless_present("private-key-file"))]
+        #[clap(long, required_unless_present("private_key_file"))]
         pub private_key: Option<String>,
         /// The private key used to sign the block
         #[clap(
             long,
-            parse(from_os_str),
-            required_unless_present("private-key"),
-            conflicts_with = "private-key"
+            required_unless_present("private_key"),
+            conflicts_with = "private_key"
         )]
         pub private_key_file: Option<PathBuf>,
         /// Input format for the private key. raw is only available when reading the private key from a file or stdin
@@ -464,8 +457,8 @@ mod common_args {
         #[clap(
             long,
             value_enum,
-            value_name("PRIVATE_KEY_ALGORITHM"),
-            requires("private-key-file")
+            value_name = "PRIVATE_KEY_ALGORITHM",
+            requires("private_key_file")
         )]
         pub private_key_algorithm: Option<Algorithm>,
     }
