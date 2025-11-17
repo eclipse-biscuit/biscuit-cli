@@ -102,7 +102,6 @@ name = "biscuit-cli"
 version = "0.6.0"
 dependencies = [
  "anyhow",
- "atty",
  "biscuit-auth",
  "chrono",
  "clap",
