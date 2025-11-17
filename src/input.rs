@@ -26,17 +26,12 @@ pub enum BiscuitFormat {
     Base64Biscuit,
 }
 
-#[derive(PartialEq, Clone, Copy, Debug, ValueEnum)]
+#[derive(PartialEq, Clone, Copy, Debug, Default, ValueEnum)]
 pub enum KeyFormat {
     Raw,
+    #[default]
     Hex,
     Pem,
-}
-
-impl Default for KeyFormat {
-    fn default() -> Self {
-        Self::Hex
-    }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
@@ -581,9 +576,8 @@ pub enum Param {
 }
 
 pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
-    use std::io::{Error, ErrorKind};
-    let (binding, value) = (kv.split_once('=').ok_or_else(|| Error::new(
-        ErrorKind::Other,
+    use std::io::Error;
+    let (binding, value) = (kv.split_once('=').ok_or_else(|| Error::other(
         "Params must be `key=value` or `key:type=value` where type is pubkey, string, integer, date, bytes or bool.",
     )))?;
 
@@ -600,28 +594,27 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
       Some("integer") => {
         let int = value
             .parse()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+            .map_err(|e| Error::other(format!("{}", &e)))?;
         Ok(Param::Term(name.to_string(), Term::Integer(int)))
       },
       Some("date") => {
         let date =
             time::OffsetDateTime::parse(value, &time::format_description::well_known::Rfc3339)
-                .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+                .map_err(|e| Error::other(format!("{}", &e)))?;
         let timestamp = date
             .unix_timestamp()
             .try_into()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+            .map_err(|e| Error::other(format!("{}", &e)))?;
         Ok(Param::Term(name.to_string(), Term::Date(timestamp)))
       },
       Some("bytes") => {
         let hex_bytes = value.strip_prefix("hex:").ok_or_else(|| {
-            Error::new(
-        ErrorKind::Other,
+            Error::other(
         "Unusupported byte array literal. Byte arrays must be hex-encoded and start with `hex:`."
         )
         })?;
         let bytes =
-            hex::decode(hex_bytes).map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+            hex::decode(hex_bytes).map_err(|e| Error::other(format!("{}", &e)))?;
         Ok(Param::Term(name.to_string(), Term::Bytes(bytes)))
       },
       Some("bool") => {
@@ -630,8 +623,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
         } else if value.to_lowercase() == "false" {
             Ok(Param::Term(name.to_string(), Term::Bool(false)))
         } else {
-            Err(Error::new(
-                ErrorKind::Other,
+            Err(Error::other(
                 "Boolean params must be either \"true\" or \"false\".",
             ))
         }
@@ -640,8 +632,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
         Ok(Param::Term(name.to_string(), Term::Str(value.to_string())))
       },
       _ => {
-        Err(Error::new(
-                ErrorKind::Other,
+        Err(Error::other(
                 "Unsupported parameter type. Supported types are `pubkey`, `string`, `integer`, `date`, `bytes`, or `bool`.",
             ))
       }
@@ -649,7 +640,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
 }
 
 pub fn parse_rule(rule: &str) -> Result<Rule, std::io::Error> {
-    use std::io::{Error, ErrorKind};
+    use std::io::Error;
     rule.try_into()
-        .map_err(|e| Error::new(ErrorKind::Other, format!("Could not parse rule: {e}")))
+        .map_err(|e| Error::other(format!("Could not parse rule: {e}")))
 }

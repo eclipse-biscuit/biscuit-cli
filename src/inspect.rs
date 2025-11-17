@@ -13,7 +13,6 @@ use biscuit_auth::{
 use chrono::offset::Utc;
 use serde::Serialize;
 use serde_json::json;
-use std::path::PathBuf;
 use std::{fmt::Display, fs};
 
 use crate::cli::*;
@@ -398,7 +397,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if inspect.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if inspect.biscuit_input_args.biscuit_file.as_path() == "-" {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(
@@ -641,7 +640,7 @@ pub fn handle_inspect_snapshot_inner(
         BiscuitFormat::Base64Biscuit
     };
 
-    let snapshot_from = if inspect_snapshot.snapshot_file == PathBuf::from("-") {
+    let snapshot_from = if inspect_snapshot.snapshot_file.as_path() == "-" {
         BiscuitBytes::FromStdin(snapshot_format)
     } else {
         BiscuitBytes::FromFile(snapshot_format, inspect_snapshot.snapshot_file.clone())

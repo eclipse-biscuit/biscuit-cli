@@ -184,7 +184,7 @@ fn handle_attenuate(attenuate: &Attenuate) -> Result<()> {
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if attenuate.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if attenuate.biscuit_input_args.biscuit_file.as_path() == "-" {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(
@@ -237,7 +237,7 @@ fn handle_generate_request(generate_request: &GenerateThirdPartyBlockRequest) ->
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if generate_request.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if generate_request.biscuit_input_args.biscuit_file.as_path() == "-" {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(
@@ -268,7 +268,7 @@ fn handle_generate_third_party_block(
         BiscuitFormat::Base64Biscuit
     };
 
-    let request_from = if generate_third_party_block.request_file == PathBuf::from("-") {
+    let request_from = if generate_third_party_block.request_file.as_path() == "-" {
         BiscuitBytes::FromStdin(block_format)
     } else {
         BiscuitBytes::FromFile(
@@ -345,7 +345,7 @@ fn handle_append_third_party_block(append_third_party_block: &AppendThirdPartyBl
     };
 
     let biscuit_from =
-        if append_third_party_block.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+        if append_third_party_block.biscuit_input_args.biscuit_file.as_path() == "-" {
             BiscuitBytes::FromStdin(biscuit_format)
         } else {
             BiscuitBytes::FromFile(
@@ -398,7 +398,7 @@ fn handle_seal(seal: &Seal) -> Result<()> {
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if seal.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if seal.biscuit_input_args.biscuit_file.as_path() == "-" {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(biscuit_format, seal.biscuit_input_args.biscuit_file.clone())
