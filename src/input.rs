@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 use anyhow::{bail, Result};
-use atty::Stream;
 use biscuit_auth::{
     builder::{BiscuitBuilder, BlockBuilder, Rule, Term},
     Authorizer, AuthorizerBuilder, PrivateKey, PublicKey, ThirdPartyRequest, UnverifiedBiscuit,
@@ -13,7 +12,7 @@ use chrono::{DateTime, Duration, Utc};
 use clap::{PossibleValue, ValueEnum};
 use parse_duration as duration_parser;
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self, IsTerminal, Read};
 use std::path::PathBuf;
 use std::process::Command;
 use std::{collections::HashMap, convert::TryInto};
@@ -123,7 +122,7 @@ pub fn ensure_no_input_conflict_third_party(
 }
 
 pub fn read_stdin_string(desc: &str) -> Result<String> {
-    if atty::is(Stream::Stdin) && atty::is(Stream::Stderr) {
+    if io::stdin().is_terminal() && io::stderr().is_terminal() {
         eprintln!("Please input a {}, followed by <enter> and ^D", &desc);
     }
     let mut buffer = String::new();
@@ -132,7 +131,7 @@ pub fn read_stdin_string(desc: &str) -> Result<String> {
 }
 
 pub fn read_stdin_bytes() -> Result<Vec<u8>> {
-    if atty::is(Stream::Stdin) {
+    if io::stdin().is_terminal() {
         Err(BinaryFromTTY)?
     }
     let mut buffer = Vec::new();
@@ -146,7 +145,7 @@ pub fn read_editor_string() -> Result<String> {
         .tempfile()?;
     let path = &file.path();
 
-    if atty::isnt(Stream::Stdin) || atty::isnt(Stream::Stdout) {
+    if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
         Err(EditorOutsideTTY)?
     }
 
