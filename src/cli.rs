@@ -80,10 +80,10 @@ pub struct KeyPairCmd {
     /// Public and private key output format
     #[clap(long, value_enum, default_value_t)]
     pub key_output_format: KeyFormat,
-    /// Only output the private key
+    /// Only output the public key
     #[clap(long, conflicts_with("only-private-key"))]
     pub only_public_key: bool,
-    /// Only output the public key
+    /// Only output the private key
     #[clap(long, conflicts_with("only-public-key"))]
     pub only_private_key: bool,
 }
