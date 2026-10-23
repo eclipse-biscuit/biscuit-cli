@@ -97,7 +97,7 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
             } else {
                 println!("Generating a new random keypair");
             }
-            println!(
+            print!(
                 "{}{}",
                 *key_pair.private().to_pem()?,
                 key_pair.public().to_pem()?
@@ -110,7 +110,7 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
             println!("{}", key_pair.private().to_prefixed_string());
         }
         (true, false, KeyFormat::Pem) => {
-            println!("{}", *key_pair.private().to_pem()?);
+            print!("{}", *key_pair.private().to_pem()?);
         }
         (false, true, KeyFormat::Raw) => {
             let _ = io::stdout().write_all(&key_pair.public().to_bytes());
@@ -119,7 +119,7 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
             println!("{}", key_pair.public());
         }
         (false, true, KeyFormat::Pem) => {
-            println!("{}", key_pair.public().to_pem()?);
+            print!("{}", key_pair.public().to_pem()?);
         }
         // the other combinations are prevented by clap
         _ => unreachable!(),
