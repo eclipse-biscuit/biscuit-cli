@@ -4,11 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 use anyhow::{bail, Result};
-use biscuit_auth::{
-    builder::BlockBuilder,
-    builder_ext::BuilderExt,
-    Biscuit, {KeyPair, PrivateKey},
-};
+use biscuit_auth::{builder::BlockBuilder, builder_ext::BuilderExt, Biscuit, PrivateKey};
 use clap::Parser;
 use std::io;
 use std::io::Write;
@@ -68,10 +64,10 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
         None
     };
 
-    let key_pair = if let Some(private) = private_key {
-        KeyPair::from(&private)
+    let private = if let Some(private) = private_key {
+        private
     } else {
-        KeyPair::new_with_algorithm(key_pair_cmd.key_algorithm.0)
+        PrivateKey::new_with_algorithm(key_pair_cmd.key_algorithm.0)
     };
 
     match (
@@ -88,8 +84,8 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
             } else {
                 println!("Generating a new random keypair");
             }
-            println!("Private key: {}", key_pair.private().to_prefixed_string());
-            println!("Public key: {}", key_pair.public());
+            println!("Private key: {}", private.to_prefixed_string());
+            println!("Public key: {}", private.public());
         }
         (false, false, KeyFormat::Pem) => {
             if private_key_from.is_some() {
@@ -97,29 +93,25 @@ fn handle_keypair(key_pair_cmd: &KeyPairCmd) -> Result<()> {
             } else {
                 println!("Generating a new random keypair");
             }
-            print!(
-                "{}{}",
-                *key_pair.private().to_pem()?,
-                key_pair.public().to_pem()?
-            );
+            print!("{}{}", *private.to_pem()?, private.public().to_pem()?);
         }
         (true, false, KeyFormat::Raw) => {
-            let _ = io::stdout().write_all(&key_pair.private().to_bytes());
+            let _ = io::stdout().write_all(&private.to_bytes());
         }
         (true, false, KeyFormat::Hex) => {
-            println!("{}", key_pair.private().to_prefixed_string());
+            println!("{}", private.to_prefixed_string());
         }
         (true, false, KeyFormat::Pem) => {
-            print!("{}", *key_pair.private().to_pem()?);
+            print!("{}", *private.to_pem()?);
         }
         (false, true, KeyFormat::Raw) => {
-            let _ = io::stdout().write_all(&key_pair.public().to_bytes());
+            let _ = io::stdout().write_all(&private.public().to_bytes());
         }
         (false, true, KeyFormat::Hex) => {
-            println!("{}", key_pair.public());
+            println!("{}", private.public());
         }
         (false, true, KeyFormat::Pem) => {
-            print!("{}", key_pair.public().to_pem()?);
+            print!("{}", private.public().to_pem()?);
         }
         // the other combinations are prevented by clap
         _ => unreachable!(),
@@ -134,7 +126,7 @@ fn handle_generate(generate: &Generate) -> Result<()> {
         None => DatalogInput::FromEditor,
     };
 
-    let private_key: Result<PrivateKey> = read_private_key_from(
+    let private_key = read_private_key_from(
         &match (
             &generate.private_key_args.private_key,
             &generate.private_key_args.private_key_file,
@@ -147,9 +139,8 @@ fn handle_generate(generate: &Generate) -> Result<()> {
             _ => unreachable!(),
         },
         &generate.private_key_args.private_key_algorithm,
-    );
+    )?;
 
-    let root = KeyPair::from(&private_key?);
     let mut builder = Biscuit::builder();
     builder = read_authority_from(
         &authority_from,
@@ -164,7 +155,7 @@ fn handle_generate(generate: &Generate) -> Result<()> {
     if let Some(root_key_id) = &generate.root_key_id {
         builder = builder.root_key_id(*root_key_id);
     }
-    let biscuit = builder.build(&root).expect("Error building biscuit"); // todo display error
+    let biscuit = builder.build(&private_key).expect("Error building biscuit"); // todo display error
     let encoded = if generate.raw {
         biscuit.to_vec().expect("Error serializing token")
     } else {

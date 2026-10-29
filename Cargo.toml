@@ -16,7 +16,7 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-biscuit-auth = { version = "6.0.0", features = ["serde-error", "pem"] }
+biscuit-auth = { version = "7.0.0-alpha.1", features = ["serde-error", "pem"] }
 clap = { version = "^3.0", features = ["color", "derive"] }
 chrono = "^0.4"
 hex = "0.4.3"
