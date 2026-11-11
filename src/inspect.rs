@@ -119,6 +119,7 @@ struct QueryResult {
     query_all: bool,
     facts: RResult<Vec<String>, Token>,
     elapsed_micros: u128,
+    steps: u64,
 }
 
 impl Display for QueryResult {
@@ -127,14 +128,14 @@ impl Display for QueryResult {
         if self.query_all {
             writeln!(
                 f,
-                "🔎 Running query on all facts: {} ({}μs)",
-                &self.query, self.elapsed_micros
+                "🔎 Running query on all facts: {} ({}μs, {} steps)",
+                &self.query, self.elapsed_micros, self.steps
             )?;
         } else {
             writeln!(
                 f,
-                "🔎 Running query: {} ({}μs)",
-                &self.query, self.elapsed_micros
+                "🔎 Running query: {} ({}μs, {} steps)",
+                &self.query, self.elapsed_micros, self.steps
             )?;
         }
         match &self.facts.clone().into_result() {
@@ -160,6 +161,7 @@ struct AuthResult {
     policies: Vec<String>,
     result: RResult<(usize, String), Token>,
     iterations: u64,
+    steps: u64,
     elapsed_micros: Option<u128>,
 }
 
@@ -169,22 +171,24 @@ impl Display for AuthResult {
             Ok((_, policy)) => {
                 writeln!(
                     f,
-                    "✅ Authorizer check succeeded 🛡️ ({}μs, {} iterations)",
+                    "✅ Authorizer check succeeded 🛡️ ({}μs, {} iterations, {} steps)",
                     self.elapsed_micros
                         .map(|e| e.to_string())
                         .unwrap_or("n/a".to_string()),
                     self.iterations,
+                    self.steps,
                 )?;
                 writeln!(f, "Matched allow policy: {}", policy)
             }
             Err(e) => {
                 writeln!(
                     f,
-                    "❌ Authorizer check failed 🛡️ ({}μs, {} iterations)",
+                    "❌ Authorizer check failed 🛡️ ({}μs, {} iterations, {} steps)",
                     self.elapsed_micros
                         .map(|e| e.to_string())
                         .unwrap_or("n/a".to_string()),
                     self.iterations,
+                    self.steps,
                 )?;
                 match e {
                     Token::FailedLogic(l) => display_logic_error(f, &self.policies, l),
@@ -252,6 +256,7 @@ impl InspectionResults {
 struct SnapshotDescription {
     code: String,
     iterations: u64,
+    steps: Option<u64>,
     elapsed_micros: Option<u128>,
     already_evaluated: bool,
 }
@@ -263,8 +268,10 @@ impl Display for SnapshotDescription {
         if let Some(elapsed_micros) = self.elapsed_micros {
             writeln!(
                 f,
-                "⏱️ Execution time: {}μs ({} iterations)",
-                elapsed_micros, self.iterations
+                "⏱️ Execution time: {}μs ({} iterations, {} steps)",
+                elapsed_micros,
+                self.iterations,
+                self.steps.map_or("n/a".to_string(), |s| s.to_string())
             )
         } else {
             writeln!(f, "⏱️ Execution time: not evaluated yet")
@@ -369,6 +376,7 @@ fn handle_query(
             .execution_time()
             .expect("Missing execution time")
             .as_micros(),
+        steps: authorizer.elapsed_steps(),
     })
 }
 
@@ -541,6 +549,10 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
                         .run_limits_args
                         .max_time
                         .map_or_else(|| RunLimits::default().max_time, |d| d.to_std().unwrap()),
+                    max_steps: inspect
+                        .run_limits_args
+                        .max_steps
+                        .unwrap_or_else(|| RunLimits::default().max_steps),
                 });
 
                 auth_result = Some(AuthResult {
@@ -554,6 +566,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
                         })
                         .into(),
                     iterations: authorizer.iterations(),
+                    steps: authorizer.elapsed_steps(),
                     elapsed_micros: authorizer.execution_time().map(|e| e.as_micros()),
                 });
 
@@ -652,6 +665,9 @@ pub fn handle_inspect_snapshot_inner(
     let contents = SnapshotDescription {
         code: authorizer.to_string(),
         iterations: authorizer.iterations(),
+        steps: authorizer
+            .execution_time()
+            .map(|_| authorizer.elapsed_steps()),
         elapsed_micros: authorizer.execution_time().map(|d| d.as_micros()),
         already_evaluated: authorizer.execution_time().is_some(),
     };
@@ -686,6 +702,10 @@ fn handle_snapshot_evaluation(
             .run_limits_args
             .max_time
             .map_or_else(|| RunLimits::default().max_time, |d| d.to_std().unwrap()),
+        max_steps: inspect_snapshot
+            .run_limits_args
+            .max_steps
+            .unwrap_or_else(|| RunLimits::default().max_steps),
     });
 
     let result = match authorizer_result {
@@ -703,6 +723,7 @@ fn handle_snapshot_evaluation(
         policies,
         result,
         iterations: authorizer.iterations(),
+        steps: authorizer.elapsed_steps(),
         elapsed_micros: authorizer.execution_time().map(|e| e.as_micros()),
     };
 

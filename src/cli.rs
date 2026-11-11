@@ -337,6 +337,10 @@ mod common_args {
             verbatim_doc_comment
         )]
         pub max_time: Option<Duration>,
+        /// Configure the maximum amount of evaluation steps before aborting
+        /// evaluation
+        #[clap(long)]
+        pub max_steps: Option<u64>,
     }
 
     /// Arguments related to running authorization
