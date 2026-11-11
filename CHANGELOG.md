@@ -1,3 +1,11 @@
+# `0.7.0`
+
+- biscuit-auth 7.0.0
+  - breaking: errors in the output of `inspect --json` and `inspect-snapshot --json` use the new
+    JSON encoding: variant names are `snake_case`, enums with data are adjacently tagged
+    (`{"type": "failed_logic", "value": { ... }}`) and enums without data are plain strings
+  - support for `max_steps` run limit
+
 # `0.6.0`
 
 - biscuit-auth 6.0.0
