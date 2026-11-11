@@ -347,6 +347,8 @@ fn handle_query(
     all_params: &[Param],
     authorizer: &mut Authorizer,
 ) -> std::result::Result<QueryResult, Token> {
+    let steps_before = authorizer.elapsed_steps();
+    let time_before = authorizer.execution_time().map_or(0, |t| t.as_micros());
     let mut rule = query.clone();
 
     for p in all_params {
@@ -375,8 +377,9 @@ fn handle_query(
         elapsed_micros: authorizer
             .execution_time()
             .expect("Missing execution time")
-            .as_micros(),
-        steps: authorizer.elapsed_steps(),
+            .as_micros()
+            - time_before,
+        steps: authorizer.elapsed_steps() - steps_before,
     })
 }
 
