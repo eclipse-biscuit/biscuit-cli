@@ -6,6 +6,7 @@
 use anyhow::{bail, Result};
 use biscuit_auth::{
     builder::{BiscuitBuilder, BlockBuilder, Rule, Term},
+    public_keys::PublicKeyData,
     Authorizer, AuthorizerBuilder, PrivateKey, PublicKey, ThirdPartyRequest, UnverifiedBiscuit,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -197,7 +198,7 @@ pub fn read_authority_from(
                 params.insert(name.clone(), t.clone());
             }
             Param::PublicKey(name, pk) => {
-                scope_params.insert(name.clone(), *pk);
+                scope_params.insert(name.clone(), PublicKeyData::from(*pk));
             }
         }
     }
@@ -233,7 +234,7 @@ pub fn read_block_from(
                 params.insert(name.clone(), t.clone());
             }
             Param::PublicKey(name, pk) => {
-                scope_params.insert(name.clone(), *pk);
+                scope_params.insert(name.clone(), PublicKeyData::from(*pk));
             }
         }
     }
@@ -276,7 +277,7 @@ pub fn read_authorizer_from_datalog(
                 params.insert(name.clone(), t.clone());
             }
             Param::PublicKey(name, pk) => {
-                scope_params.insert(name.clone(), *pk);
+                scope_params.insert(name.clone(), PublicKeyData::from(*pk));
             }
         }
     }
