@@ -63,9 +63,9 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "biscuit-auth"
-version = "7.0.0-alpha.1"
+version = "7.0.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0596a4c8b69a9538b8b1d160b9f94df2d970f4c0fb2657cb2fdf20239ac7eac7"
+checksum = "741b091bed4c4602c7e3d7575f5bd5a9dafb86dff0d2830b5090b5ed78618fda"
 dependencies = [
  "base64",
  "biscuit-parser",

@@ -54,6 +54,7 @@ impl ValueEnum for Algorithm {
         Some(PossibleValue::new(match self.0 {
             biscuit_auth::Algorithm::Ed25519 => "ed25519",
             biscuit_auth::Algorithm::Secp256r1 => "secp256r1",
+            _ => return None,
         }))
     }
 }
