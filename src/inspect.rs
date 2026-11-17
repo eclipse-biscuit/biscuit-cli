@@ -10,7 +10,6 @@ use biscuit_auth::{
     error::{FailedCheck, Logic, MatchedPolicy, RunLimit, Token},
     Authorizer, UnverifiedBiscuit,
 };
-use chrono::offset::Utc;
 use serde::Serialize;
 use serde_json::json;
 use std::path::PathBuf;
@@ -522,7 +521,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
             if let Some(auth_from) = authorizer_from {
                 authorizer_builder = read_authorizer_from(&auth_from)?;
                 if inspect.authorization_args.include_time {
-                    let now = Utc::now().to_rfc3339();
+                    let now = jiff::Timestamp::now();
                     let time_fact = format!("time({})", now);
                     authorizer_builder = authorizer_builder.fact(time_fact.as_ref())?;
                 }
@@ -551,7 +550,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
                     max_time: inspect
                         .run_limits_args
                         .max_time
-                        .map_or_else(|| RunLimits::default().max_time, |d| d.to_std().unwrap()),
+                        .unwrap_or_else(|| RunLimits::default().max_time),
                     max_steps: inspect
                         .run_limits_args
                         .max_steps
@@ -704,7 +703,7 @@ fn handle_snapshot_evaluation(
         max_time: inspect_snapshot
             .run_limits_args
             .max_time
-            .map_or_else(|| RunLimits::default().max_time, |d| d.to_std().unwrap()),
+            .unwrap_or_else(|| RunLimits::default().max_time),
         max_steps: inspect_snapshot
             .run_limits_args
             .max_steps

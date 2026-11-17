@@ -34,3 +34,12 @@ jobs:
     - name: Tests
       run: |
         cargo test
+
+  advisories:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: EmbarkStudios/cargo-deny-action@v2
+      with:
+        command: check advisories bans sources
