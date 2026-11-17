@@ -26,8 +26,6 @@ pub enum CliError {
     FailedParsingEditorEnvVar,
     #[error("Failed to parse {0}: {1}")]
     ParseError(String, String),
-    #[error("Duration outside representable intervals")]
-    InvalidDuration,
     #[error("A public key is required when authorizing a biscuit")]
     MissingPublicKeyForAuthorization,
     #[error("A public key is required when querying a biscuit")]

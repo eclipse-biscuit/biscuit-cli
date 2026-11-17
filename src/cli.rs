@@ -276,9 +276,9 @@ pub struct Seal {
 mod common_args {
     use crate::input::*;
     use biscuit_auth::builder::Rule;
-    use chrono::Duration;
     use clap::Parser;
     use std::path::PathBuf;
+    use std::time::Duration;
 
     /// Arguments related to queries
     #[derive(Parser)]

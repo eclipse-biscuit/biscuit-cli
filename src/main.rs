@@ -150,7 +150,7 @@ fn handle_generate(generate: &Generate) -> Result<()> {
     )?;
 
     if let Some(ttl) = &generate.add_ttl {
-        builder = builder.check_expiration_date(ttl.to_datetime().into());
+        builder = builder.check_expiration_date(ttl.to_datetime());
     }
     if let Some(root_key_id) = &generate.root_key_id {
         builder = builder.root_key_id(*root_key_id);
@@ -208,7 +208,7 @@ fn handle_attenuate(attenuate: &Attenuate) -> Result<()> {
     )?;
 
     if let Some(ttl) = &attenuate.block_args.add_ttl {
-        block_builder = block_builder.check_expiration_date(ttl.to_datetime().into());
+        block_builder = block_builder.check_expiration_date(ttl.to_datetime());
     }
 
     let new_biscuit = biscuit.append(block_builder)?;
@@ -314,7 +314,7 @@ fn handle_generate_third_party_block(
     )?;
 
     if let Some(ttl) = &generate_third_party_block.block_args.add_ttl {
-        builder = builder.check_expiration_date(ttl.to_datetime().into());
+        builder = builder.check_expiration_date(ttl.to_datetime());
     }
 
     let block = request.create_block(&private_key?, builder)?;

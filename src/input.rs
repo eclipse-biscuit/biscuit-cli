@@ -9,13 +9,12 @@ use biscuit_auth::{
     public_keys::PublicKeyData,
     Authorizer, AuthorizerBuilder, PrivateKey, PublicKey, ThirdPartyRequest, UnverifiedBiscuit,
 };
-use chrono::{DateTime, Duration, Utc};
 use clap::{PossibleValue, ValueEnum};
-use parse_duration as duration_parser;
 use std::fs;
 use std::io::{self, IsTerminal, Read};
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{Duration, SystemTime};
 use std::{collections::HashMap, convert::TryInto};
 use std::{env, fmt::Display};
 
@@ -545,28 +544,32 @@ pub fn append_third_party_from(
 #[derive(Debug)]
 pub enum Ttl {
     Duration(Duration),
-    DateTime(DateTime<Utc>),
+    DateTime(SystemTime),
 }
 
 impl Ttl {
-    pub fn to_datetime(&self) -> DateTime<Utc> {
+    pub fn to_datetime(&self) -> SystemTime {
         match self {
-            Self::Duration(d) => Utc::now() + *d,
+            Self::Duration(d) => SystemTime::now() + *d,
             Self::DateTime(d) => *d,
         }
     }
 }
 
 pub fn parse_duration(str: &str) -> Result<Duration> {
-    let std_duration = duration_parser::parse(str)
-        .map_err(|e| ParseError("duration".to_string(), e.to_string()))?;
-    let duration = Duration::from_std(std_duration).map_err(|_| InvalidDuration)?;
+    let span: jiff::Span = str
+        .parse()
+        .map_err(|e: jiff::Error| ParseError("duration".to_string(), e.to_string()))?;
+    let duration = span
+        .to_duration(jiff::SpanRelativeTo::days_are_24_hours())
+        .and_then(|d| d.try_into())
+        .map_err(|e: jiff::Error| ParseError("duration".to_string(), e.to_string()))?;
     Ok(duration)
 }
 
-pub fn parse_date(str: &str) -> Result<DateTime<Utc>> {
-    let r = DateTime::parse_from_rfc3339(str)?;
-    Ok(r.into())
+pub fn parse_date(str: &str) -> Result<SystemTime> {
+    let timestamp: jiff::Timestamp = str.parse()?;
+    Ok(timestamp.try_into()?)
 }
 
 pub fn parse_ttl(str: &str) -> Result<Ttl> {
