@@ -8,7 +8,7 @@ use biscuit_auth::{builder::BlockBuilder, builder_ext::BuilderExt, Biscuit, Priv
 use clap::Parser;
 use std::io;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod cli;
 mod errors;
@@ -175,7 +175,7 @@ fn handle_attenuate(attenuate: &Attenuate) -> Result<()> {
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if attenuate.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if attenuate.biscuit_input_args.biscuit_file == Path::new("-") {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(
@@ -228,7 +228,7 @@ fn handle_generate_request(generate_request: &GenerateThirdPartyBlockRequest) ->
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if generate_request.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if generate_request.biscuit_input_args.biscuit_file == Path::new("-") {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(
@@ -259,7 +259,7 @@ fn handle_generate_third_party_block(
         BiscuitFormat::Base64Biscuit
     };
 
-    let request_from = if generate_third_party_block.request_file == PathBuf::from("-") {
+    let request_from = if generate_third_party_block.request_file == Path::new("-") {
         BiscuitBytes::FromStdin(block_format)
     } else {
         BiscuitBytes::FromFile(
@@ -335,18 +335,18 @@ fn handle_append_third_party_block(append_third_party_block: &AppendThirdPartyBl
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from =
-        if append_third_party_block.biscuit_input_args.biscuit_file == PathBuf::from("-") {
-            BiscuitBytes::FromStdin(biscuit_format)
-        } else {
-            BiscuitBytes::FromFile(
-                biscuit_format,
-                append_third_party_block
-                    .biscuit_input_args
-                    .biscuit_file
-                    .clone(),
-            )
-        };
+    let biscuit_from = if append_third_party_block.biscuit_input_args.biscuit_file == Path::new("-")
+    {
+        BiscuitBytes::FromStdin(biscuit_format)
+    } else {
+        BiscuitBytes::FromFile(
+            biscuit_format,
+            append_third_party_block
+                .biscuit_input_args
+                .biscuit_file
+                .clone(),
+        )
+    };
 
     let block_file_format = if append_third_party_block.raw_block_contents {
         BiscuitFormat::RawBiscuit
@@ -389,7 +389,7 @@ fn handle_seal(seal: &Seal) -> Result<()> {
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if seal.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if seal.biscuit_input_args.biscuit_file == Path::new("-") {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(biscuit_format, seal.biscuit_input_args.biscuit_file.clone())

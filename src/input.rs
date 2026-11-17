@@ -25,17 +25,12 @@ pub enum BiscuitFormat {
     Base64Biscuit,
 }
 
-#[derive(PartialEq, Clone, Copy, Debug, ValueEnum)]
+#[derive(PartialEq, Clone, Copy, Debug, ValueEnum, Default)]
 pub enum KeyFormat {
     Raw,
+    #[default]
     Hex,
     Pem,
-}
-
-impl Default for KeyFormat {
-    fn default() -> Self {
-        Self::Hex
-    }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
@@ -124,7 +119,7 @@ pub fn ensure_no_input_conflict_third_party(
 
 pub fn read_stdin_string(desc: &str) -> Result<String> {
     if io::stdin().is_terminal() && io::stderr().is_terminal() {
-        eprintln!("Please input a {}, followed by <enter> and ^D", &desc);
+        eprintln!("Please input a {}, followed by <enter> and ^D", desc);
     }
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
@@ -321,22 +316,22 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
         (KeyBytes::FromStdin(KeyFormat::Raw), Some(alg)) => {
             let bytes = read_stdin_bytes()?;
             PrivateKey::from_bytes(&bytes, alg.0)
-                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromStdin(KeyFormat::Hex), None) => {
             let str = read_stdin_string("hex-encoded private key")?;
             str.parse()
-                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromStdin(KeyFormat::Pem), None) => {
             let str = read_stdin_string("PEM private key")?;
             read_pem_private_key(&str, alg)
-                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromFile(KeyFormat::Raw, path), Some(alg)) => {
             let bytes = fs::read(path).map_err(|_| FileNotFound(path.clone()))?;
             PrivateKey::from_bytes(&bytes, alg.0)
-                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromFile(KeyFormat::Hex, path), None) => {
             let str = fs::read_to_string(path).map_err(|e| match e.kind() {
@@ -345,18 +340,18 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
             })?;
             str.trim()
                 .parse()
-                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromFile(KeyFormat::Pem, path), None) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
             read_pem_private_key(&str, alg)
-                .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::HexString(str), None) => str
             .parse()
-            .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?,
+            .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?,
         (KeyBytes::PemString(str), None) => read_pem_private_key(str, alg)
-            .map_err(|e| ParseError("private key".to_string(), format!("{}", &e)))?,
+            .map_err(|e| ParseError("private key".to_string(), format!("{}", e)))?,
         (KeyBytes::FromStdin(KeyFormat::Raw), None)
         | (KeyBytes::FromFile(KeyFormat::Raw, _), None) => {
             bail!("Raw private key binary input requires an explicit key algorithm")
@@ -365,7 +360,7 @@ pub fn read_private_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result
             bail!("The private key algorithm must only be set when reading raw binary input")
         }
     };
-    let key_alg = key.algorithm().into();
+    let key_alg = key.algorithm();
 
     if let Some(a) = alg {
         if a.0 != key_alg {
@@ -391,39 +386,39 @@ pub fn read_public_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<
         (KeyBytes::FromStdin(KeyFormat::Raw), Some(alg)) => {
             let bytes = read_stdin_bytes()?;
             PublicKey::from_bytes(&bytes, alg.0)
-                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromStdin(KeyFormat::Hex), None) => {
             let str = read_stdin_string("hex-encoded public key")?;
             str.parse()
-                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromStdin(KeyFormat::Pem), None) => {
             let str = read_stdin_string("PEM public key")?;
             read_pem_public_key(&str, alg)
-                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromFile(KeyFormat::Raw, path), Some(alg)) => {
             let bytes = fs::read(path).map_err(|_| FileNotFound(path.clone()))?;
             PublicKey::from_bytes(&bytes, alg.0)
-                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromFile(KeyFormat::Hex, path), None) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
             str.trim()
                 .parse()
-                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::FromFile(KeyFormat::Pem, path), None) => {
             let str = fs::read_to_string(path).map_err(|_| FileNotFound(path.clone()))?;
             read_pem_public_key(&str, alg)
-                .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?
+                .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?
         }
         (KeyBytes::HexString(str), None) => str
             .parse()
-            .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?,
+            .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?,
         (KeyBytes::PemString(str), None) => read_pem_public_key(str, alg)
-            .map_err(|e| ParseError("public key".to_string(), format!("{}", &e)))?,
+            .map_err(|e| ParseError("public key".to_string(), format!("{}", e)))?,
         (KeyBytes::FromStdin(KeyFormat::Raw), None)
         | (KeyBytes::FromFile(KeyFormat::Raw, _), None) => {
             bail!("Raw public key binary input requires an explicit key algorithm")
@@ -432,7 +427,7 @@ pub fn read_public_key_from(from: &KeyBytes, alg: &Option<Algorithm>) -> Result<
             bail!("The public key algorithm must only be set when reading raw binary input")
         }
     };
-    let key_alg = key.algorithm().into();
+    let key_alg = key.algorithm();
 
     if let Some(a) = alg {
         if a.0 != key_alg {
@@ -585,9 +580,8 @@ pub enum Param {
 }
 
 pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
-    use std::io::{Error, ErrorKind};
-    let (binding, value) = (kv.split_once('=').ok_or_else(|| Error::new(
-        ErrorKind::Other,
+    use std::io::Error;
+    let (binding, value) = (kv.split_once('=').ok_or_else(|| Error::other(
         "Params must be `key=value` or `key:type=value` where type is pubkey, string, integer, date, bytes or bool.",
     )))?;
 
@@ -604,28 +598,27 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
       Some("integer") => {
         let int = value
             .parse()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+            .map_err(|e| Error::other(format!("{}", e)))?;
         Ok(Param::Term(name.to_string(), Term::Integer(int)))
       },
       Some("date") => {
         let date =
             time::OffsetDateTime::parse(value, &time::format_description::well_known::Rfc3339)
-                .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+                .map_err(|e| Error::other(format!("{}", e)))?;
         let timestamp = date
             .unix_timestamp()
             .try_into()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+            .map_err(|e| Error::other(format!("{}", e)))?;
         Ok(Param::Term(name.to_string(), Term::Date(timestamp)))
       },
       Some("bytes") => {
         let hex_bytes = value.strip_prefix("hex:").ok_or_else(|| {
-            Error::new(
-        ErrorKind::Other,
+            Error::other(
         "Unusupported byte array literal. Byte arrays must be hex-encoded and start with `hex:`."
         )
         })?;
         let bytes =
-            hex::decode(hex_bytes).map_err(|e| Error::new(ErrorKind::Other, format!("{}", &e)))?;
+            hex::decode(hex_bytes).map_err(|e| Error::other(format!("{}", e)))?;
         Ok(Param::Term(name.to_string(), Term::Bytes(bytes)))
       },
       Some("bool") => {
@@ -634,8 +627,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
         } else if value.to_lowercase() == "false" {
             Ok(Param::Term(name.to_string(), Term::Bool(false)))
         } else {
-            Err(Error::new(
-                ErrorKind::Other,
+            Err(Error::other(
                 "Boolean params must be either \"true\" or \"false\".",
             ))
         }
@@ -644,8 +636,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
         Ok(Param::Term(name.to_string(), Term::Str(value.to_string())))
       },
       _ => {
-        Err(Error::new(
-                ErrorKind::Other,
+        Err(Error::other(
                 "Unsupported parameter type. Supported types are `pubkey`, `string`, `integer`, `date`, `bytes`, or `bool`.",
             ))
       }
@@ -653,7 +644,7 @@ pub fn parse_param(kv: &str) -> Result<Param, std::io::Error> {
 }
 
 pub fn parse_rule(rule: &str) -> Result<Rule, std::io::Error> {
-    use std::io::{Error, ErrorKind};
+    use std::io::Error;
     rule.try_into()
-        .map_err(|e| Error::new(ErrorKind::Other, format!("Could not parse rule: {e}")))
+        .map_err(|e| Error::other(format!("Could not parse rule: {e}")))
 }
