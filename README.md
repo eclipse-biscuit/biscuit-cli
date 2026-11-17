@@ -74,6 +74,7 @@ By default, `biscuit` inspect only prints out the biscuit contents (datalog bloc
 ```sh
 $ # this will inspect the token stored in the given file
 $ biscuit inspect biscuit-file
+> Open biscuit
 > Authority block:
 > == Datalog v3.0 ==
 > right("file1");
@@ -92,6 +93,7 @@ A public key can be provided to verify the biscuit signatures
 ```sh
 $ # this will make sure the biscuit has been signed with the expected key pair
 $ biscuit inspect --public-key-file public-key-file biscuit-file
+> Open biscuit
 > Authority block:
 > == Datalog v3.0 ==
 > right("file1");
@@ -113,6 +115,7 @@ If you want to use your text editor to type in the authorizer, you can use `--au
 $ biscuit inspect --public-key-file public-key-file \
                   --authorize-with 'allow if right("file1");' \
                   biscuit-file
+> Open biscuit
 > Authority block:
 > == Datalog v3.0 ==
 > right("file1");
@@ -123,7 +126,7 @@ $ biscuit inspect --public-key-file public-key-file \
 > ==========
 > 
 > ✅ Public key check succeeded 🔑
-> ✅ Authorizer check succeeded 🛡️
+> ✅ Authorizer check succeeded 🛡️ (12μs, 0 iterations, 1 steps)
 > Matched allow policy: allow if right("file1")
 ```
 
@@ -131,7 +134,7 @@ $ biscuit inspect --public-key-file public-key-file \
 
 ```sh
 # this will create a new biscuit token with the provided block appended
-$ biscuit attenuate biscuit-file --block 'check if client_ip_address("127.0.0.1);'
+$ biscuit attenuate biscuit-file --block 'check if client_ip_address("127.0.0.1");'
 > En0KEwoFZmlsZTEYAiIICgYIBBICGAcSJAgAEiBrhbrvPUXH9RPOzIwnLVyRWwcK64JQ97kBvz1hLJfjfBpAUmx4_6OBnLcbyt5p1tePgK0SCfIdLDMmhXxmyo_BnGOkKDkptpCuQMqEdFlGMcruRksDZ7eB08wROTQ8E5AFCRqhAQo3CgVxdWVyeQoRY2xpZW50X2lwX2FkZHJlc3MKCTEyNy4wLjAuMRgCMg4KDAoCCAgSBggJEgIYChIkCAASIL6EGw7TZQ-8sRa0RT1U0cW8mjN_GzoW0jwX_67I0zPCGkDL5ho8NPsZwskzJ86e31qR29grjcEQormtv7I3YoQy_I2aoZGNtlviX72FuBT85KlVxJtjOiLxCIOvJj4MVN0KIiIKIM6btYoZ-ONE2gKEJ2raR8Bck7SMBAUf2sK7Z8I7uM_D
 ```
 
