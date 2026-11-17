@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 biscuit-auth = { version = "7.0.0-alpha.4", features = ["serde-types", "pem"] }
-clap = { version = "^3.0", features = ["color", "derive"] }
+clap = { version = "4", features = ["color", "derive"] }
 hex = "0.4.3"
 tempfile = "3.2.0"
 shell-words = "^1.0.0"
