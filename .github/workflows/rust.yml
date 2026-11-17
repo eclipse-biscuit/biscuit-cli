@@ -30,7 +30,7 @@ jobs:
       run: |
         cargo build --verbose
         cargo fmt --check
-        cargo clippy
+        cargo clippy --all-targets -- -D warnings
     - name: Tests
       run: |
         cargo test

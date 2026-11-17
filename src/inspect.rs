@@ -12,8 +12,7 @@ use biscuit_auth::{
 };
 use serde::Serialize;
 use serde_json::json;
-use std::path::PathBuf;
-use std::{fmt::Display, fs};
+use std::{fmt::Display, fs, path::Path};
 
 use crate::cli::*;
 use crate::errors::CliError::*;
@@ -55,11 +54,7 @@ impl Display for TokenDescription {
         for (i, block) in self.blocks.iter().enumerate() {
             if i == 0 {
                 if let Some(root_key_id) = self.root_key_id {
-                    writeln!(
-                        f,
-                        "Authority block (root key identifier: {}):",
-                        &root_key_id
-                    )?;
+                    writeln!(f, "Authority block (root key identifier: {}):", root_key_id)?;
                 } else {
                     writeln!(f, "Authority block:")?;
                 }
@@ -128,13 +123,13 @@ impl Display for QueryResult {
             writeln!(
                 f,
                 "🔎 Running query on all facts: {} ({}μs, {} steps)",
-                &self.query, self.elapsed_micros, self.steps
+                self.query, self.elapsed_micros, self.steps
             )?;
         } else {
             writeln!(
                 f,
                 "🔎 Running query: {} ({}μs, {} steps)",
-                &self.query, self.elapsed_micros, self.steps
+                self.query, self.elapsed_micros, self.steps
             )?;
         }
         match &self.facts.clone().into_result() {
@@ -143,7 +138,7 @@ impl Display for QueryResult {
                     writeln!(f, "❌ No results")?;
                 } else {
                     for fact in facts {
-                        writeln!(f, "{}", &fact)?;
+                        writeln!(f, "{}", fact)?;
                     }
                 }
             }
@@ -388,7 +383,7 @@ pub fn handle_inspect(inspect: &Inspect) -> Result<()> {
             if inspect.json {
                 println!("{}", serde_json::to_string(&res)?);
             } else {
-                println!("{}", &res);
+                println!("{}", res);
             }
             res.ensure_success()
         }
@@ -408,7 +403,7 @@ pub fn handle_inspect_inner(inspect: &Inspect) -> Result<InspectionResults> {
         BiscuitFormat::Base64Biscuit
     };
 
-    let biscuit_from = if inspect.biscuit_input_args.biscuit_file == PathBuf::from("-") {
+    let biscuit_from = if inspect.biscuit_input_args.biscuit_file == Path::new("-") {
         BiscuitBytes::FromStdin(biscuit_format)
     } else {
         BiscuitBytes::FromFile(
@@ -634,7 +629,7 @@ pub fn handle_inspect_snapshot(inspect_snapshot: &InspectSnapshot) -> Result<()>
             if inspect_snapshot.json {
                 println!("{}", serde_json::to_string(&res)?);
             } else {
-                println!("{}", &res);
+                println!("{}", res);
             }
             res.ensure_success()
         }
@@ -656,7 +651,7 @@ pub fn handle_inspect_snapshot_inner(
         BiscuitFormat::Base64Biscuit
     };
 
-    let snapshot_from = if inspect_snapshot.snapshot_file == PathBuf::from("-") {
+    let snapshot_from = if inspect_snapshot.snapshot_file == Path::new("-") {
         BiscuitBytes::FromStdin(snapshot_format)
     } else {
         BiscuitBytes::FromFile(snapshot_format, inspect_snapshot.snapshot_file.clone())
@@ -767,7 +762,7 @@ fn display_logic_error(
         e => writeln!(
             f,
             "An execution error happened during authorization: {:?}",
-            &e
+            e
         ),
     }
 }
@@ -810,22 +805,18 @@ fn display_failed_checks(
                 let block_name = if bc.block_id == 0 {
                     "Authority block".to_owned()
                 } else {
-                    format!("Block {}", &bc.block_id)
+                    format!("Block {}", bc.block_id)
                 };
-                writeln!(f, "  {} check: {}", &block_name, &bc.rule)?;
+                writeln!(f, "  {} check: {}", block_name, bc.rule)?;
             }
-            FailedCheck::Authorizer(ac) => writeln!(f, "  Authorizer check: {}", &ac.rule)?,
+            FailedCheck::Authorizer(ac) => writeln!(f, "  Authorizer check: {}", ac.rule)?,
         }
     }
     Ok(())
 }
 
 fn display_run_limit(f: &mut std::fmt::Formatter<'_>, e: &RunLimit) -> std::fmt::Result {
-    writeln!(
-        f,
-        "The authorizer execution was aborted: {}",
-        &e.to_string()
-    )
+    writeln!(f, "The authorizer execution was aborted: {}", e)
 }
 
 fn is_sealed(b: &UnverifiedBiscuit) -> Result<bool> {
